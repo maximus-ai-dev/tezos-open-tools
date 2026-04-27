@@ -366,6 +366,7 @@ export default function SweepPage() {
               selected={selected}
               toggle={toggle}
               bulkToggle={bulkToggle}
+              includeMinted={includeMinted}
               showMintedFlag
             />
           )}
@@ -456,6 +457,7 @@ function AssetGroup({
   selected,
   toggle,
   bulkToggle,
+  includeMinted = false,
   showMintedFlag = false,
 }: {
   title: string;
@@ -463,32 +465,52 @@ function AssetGroup({
   selected: Set<string>;
   toggle: (a: SweepAsset) => void;
   bulkToggle: (assets: SweepAsset[], checked: boolean) => void;
+  includeMinted?: boolean;
   showMintedFlag?: boolean;
 }) {
-  const selectedCount = assets.reduce(
+  // Eligibility = self-minted NFTs are out unless the user opted in.
+  const eligible = assets.filter((a) => !(a.self_minted && !includeMinted));
+  const ineligibleCount = assets.length - eligible.length;
+  const selectedCount = eligible.reduce(
     (n, a) => (selected.has(assetKey(a)) ? n + 1 : n),
     0,
   );
-  const allChecked = selectedCount === assets.length && assets.length > 0;
-  const someChecked = selectedCount > 0 && selectedCount < assets.length;
+  const allChecked = selectedCount === eligible.length && eligible.length > 0;
+  const someChecked = selectedCount > 0 && selectedCount < eligible.length;
+  const sectionDisabled = eligible.length === 0;
   return (
     <section className="mt-6">
-      <label className="flex items-center gap-2 cursor-pointer mb-2">
+      <label
+        className={`flex items-center gap-2 mb-2 ${
+          sectionDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+        }`}
+      >
         <input
           type="checkbox"
           checked={allChecked}
+          disabled={sectionDisabled}
           ref={(el) => {
             if (el) el.indeterminate = someChecked;
           }}
-          onChange={(e) => bulkToggle(assets, e.target.checked)}
+          onChange={(e) => bulkToggle(eligible, e.target.checked)}
         />
         <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
-        {selectedCount > 0 && (
-          <span className="text-xs text-zinc-500">
-            — {selectedCount}/{assets.length} selected
-          </span>
-        )}
+        <span className="text-xs text-zinc-500">
+          — {selectedCount}/{eligible.length} selected
+          {ineligibleCount > 0 && (
+            <span className="text-amber-700 dark:text-amber-400">
+              {" "}
+              · {ineligibleCount} self-minted excluded
+            </span>
+          )}
+        </span>
       </label>
+      {sectionDisabled && ineligibleCount > 0 && (
+        <p className="-mt-1 mb-2 text-xs text-amber-700 dark:text-amber-400">
+          All items here are self-minted — enable &ldquo;Include NFTs you minted&rdquo; above to
+          select them.
+        </p>
+      )}
       <ul className="rounded-lg border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-200 dark:divide-zinc-800 max-h-96 overflow-y-auto">
         {assets.map((a) => (
           <AssetRow
