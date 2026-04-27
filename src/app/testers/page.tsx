@@ -2,8 +2,8 @@ import Link from "next/link";
 import { GITHUB_URL } from "@/lib/constants";
 
 export const metadata = {
-  title: "Tester program — Tezos NFT Toolkit",
-  description: "Try the beta, send feedback, get paid in ꜩ.",
+  title: "Testers — start here — Tezos NFT Toolkit",
+  description: "Onboarding for testers: how to try the beta safely and send useful feedback.",
 };
 
 export default function TestersPage() {
@@ -11,18 +11,23 @@ export default function TestersPage() {
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 text-zinc-700 dark:text-zinc-300">
       <header className="mb-8">
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-2">
-          Tester program
+          Testers — start here
         </h1>
         <p className="text-zinc-600 dark:text-zinc-400">
-          Help shake out bugs. Real wallets, real money — but small money — and feedback gets you ꜩ.
+          A 15-minute walkthrough for trying the beta safely and sending back useful feedback.
         </p>
       </header>
 
-      <Section title="The deal">
+      <Section title="The ask">
         <p>
-          Spend 15 minutes poking at the toolkit, send back what worked / didn&apos;t / felt
-          confusing, and you get <strong className="text-zinc-900 dark:text-zinc-100">10 ꜩ</strong>.
-          Find a real reproducible bug? Extra ꜩ on top.
+          Real wallets, real money — but small money. Use a low-value NFT you don&apos;t mind
+          losing if something misbehaves. Feedback comes back to the maintainer via DM or a GitHub
+          issue.
+        </p>
+        <p className="mt-3">
+          This is not a paid program. The toolkit is open source, MIT licensed, and free forever —
+          including for the maintainer running this deployment. If you find this useful, contribute
+          a fix or a PR; that&apos;s the most valuable thing you can give back.
         </p>
       </Section>
 
@@ -102,8 +107,8 @@ export default function TestersPage() {
         <p>Either path works:</p>
         <ul className="mt-3 space-y-1.5 list-disc pl-5">
           <li>
-            <strong className="text-zinc-900 dark:text-zinc-100">Easy:</strong> DM your sponsor with
-            screenshots + a one-line description. They translate it to GitHub.
+            <strong className="text-zinc-900 dark:text-zinc-100">Easy:</strong> DM the maintainer
+            with screenshots + a one-line description. They&apos;ll translate it to GitHub.
           </li>
           <li>
             <strong className="text-zinc-900 dark:text-zinc-100">Direct:</strong>{" "}
