@@ -2,6 +2,7 @@ import { getAccountTokenTransfers } from "@/lib/tzkt";
 import type { TzktTransfer } from "@/lib/tzkt";
 import { PageShell } from "@/components/common/PageShell";
 import { WalletInputForm } from "@/components/common/WalletInputForm";
+import { WatchButton } from "@/components/common/WatchButton";
 import { objktProfileLink } from "@/lib/constants";
 import { isTezosAddress, shortAddress } from "@/lib/utils";
 
@@ -110,6 +111,7 @@ async function Counterparties({ address }: { address: string }) {
               <th className="px-3 py-2 font-medium text-zinc-600 dark:text-zinc-400 text-right">Sent to them</th>
               <th className="px-3 py-2 font-medium text-zinc-600 dark:text-zinc-400 text-right">Received from</th>
               <th className="px-3 py-2 font-medium text-zinc-600 dark:text-zinc-400 text-right">Total</th>
+              <th className="px-3 py-2 w-20"></th>
             </tr>
           </thead>
           <tbody>
@@ -138,6 +140,9 @@ async function Counterparties({ address }: { address: string }) {
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums text-zinc-900 dark:text-zinc-100 font-medium">
                   {r.total}
+                </td>
+                <td className="px-3 py-2 text-right">
+                  <WatchButton address={r.address} label={r.alias ?? undefined} />
                 </td>
               </tr>
             ))}

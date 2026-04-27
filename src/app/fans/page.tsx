@@ -1,6 +1,7 @@
 import { getArtistTokenHolders } from "@/lib/objkt";
 import { PageShell } from "@/components/common/PageShell";
 import { WalletInputForm } from "@/components/common/WalletInputForm";
+import { WatchButton } from "@/components/common/WatchButton";
 import { objktProfileLink } from "@/lib/constants";
 import { isTezosAddress, shortAddress } from "@/lib/utils";
 
@@ -84,6 +85,7 @@ async function FansList({ address }: { address: string }) {
               <th className="px-3 py-2 font-medium text-zinc-600 dark:text-zinc-400">Collector</th>
               <th className="px-3 py-2 font-medium text-zinc-600 dark:text-zinc-400 text-right">Unique tokens</th>
               <th className="px-3 py-2 font-medium text-zinc-600 dark:text-zinc-400 text-right">Total editions</th>
+              <th className="px-3 py-2 w-20"></th>
             </tr>
           </thead>
           <tbody>
@@ -109,6 +111,9 @@ async function FansList({ address }: { address: string }) {
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
                   {c.totalEditions}
+                </td>
+                <td className="px-3 py-2 text-right">
+                  <WatchButton address={c.address} label={c.alias ?? undefined} />
                 </td>
               </tr>
             ))}

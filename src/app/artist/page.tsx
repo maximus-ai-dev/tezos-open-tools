@@ -3,6 +3,7 @@ import { PageShell } from "@/components/common/PageShell";
 import { WalletInputForm } from "@/components/common/WalletInputForm";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { WatchButton } from "@/components/common/WatchButton";
 import { MARKETPLACE_NAMES, objktProfileLink, objktTokenLink } from "@/lib/constants";
 import { formatDate, formatTez, ipfsToHttp, isTezosAddress, shortAddress } from "@/lib/utils";
 
@@ -56,9 +57,12 @@ async function ArtistSummary({ address }: { address: string }) {
   return (
     <div className="mt-6 space-y-8">
       <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">
-          Overview
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
+            Overview
+          </h2>
+          <WatchButton address={address} variant="full" />
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Stat label="Tokens minted" value={String(creations.length)} hint="(latest 1000)" />
           <Stat label="With active listing" value={String(totalListed)} />

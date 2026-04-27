@@ -3,6 +3,7 @@ import { PageShell } from "@/components/common/PageShell";
 import { WalletInputForm } from "@/components/common/WalletInputForm";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { WatchButton } from "@/components/common/WatchButton";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 import { isTezosAddress } from "@/lib/utils";
 
@@ -40,11 +41,14 @@ async function Creations({ address }: { address: string }) {
   }
   return (
     <>
-      <p className="mt-6 mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-        Showing latest{" "}
-        <span className="text-zinc-900 dark:text-zinc-100 font-medium">{tokens.length}</span>{" "}
-        creations.
-      </p>
+      <div className="mt-6 mb-4 flex items-center justify-between">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Showing latest{" "}
+          <span className="text-zinc-900 dark:text-zinc-100 font-medium">{tokens.length}</span>{" "}
+          creations.
+        </p>
+        <WatchButton address={address} variant="full" />
+      </div>
       <TokenGrid>
         {tokens.map((t) => {
           const listing = t.listings_active[0];
