@@ -214,6 +214,32 @@ async function main() {
   }
 
   // ─────────────────────────────────────────────────────────────────
+  header("Giveaway / multi-recipient transfer — dry-run");
+
+  if (!held) {
+    warn("No FA2 token held to test giveaway.");
+  } else {
+    const recipients = [
+      "tz1burnburnburnburnburnburnburjAYjjX",
+      "tz1ZZZZZZZZZZZZZZZZZZZZZZZZZZZZNkiRg",
+    ];
+    try {
+      const ops = await buildFa2BatchTransfer(
+        tezos,
+        address,
+        recipients.map((to) => ({ fa: held.fa, tokenId: held.tokenId, to, amount: 1 })),
+      );
+      const ests = await tezos.estimate.batch(ops);
+      const gas = ests.reduce((s, e) => s + e.gasLimit, 0);
+      ok(`giveaway 1 each to ${recipients.length} addrs — ${ops.length} ops, gas ${gas}`);
+      totalPass++;
+    } catch (err) {
+      fail(`giveaway — ${err instanceof Error ? err.message.slice(0, 200) : String(err)}`);
+    }
+    totalChecks++;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
   header("Summary");
   console.log(`  ${totalPass}/${totalChecks} dry-run checks passed.`);
   if (totalPass === totalChecks) {
