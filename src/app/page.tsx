@@ -15,7 +15,7 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-const ORDER: ToolCategory[] = ["collector", "fxhash", "artist", "general", "advanced"];
+const ORDER: ToolCategory[] = ["collector", "artist", "general", "fxhash", "advanced"];
 
 export default async function Home() {
   const groups = toolsByCategory();

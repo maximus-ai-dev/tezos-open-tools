@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CATEGORY_LABELS, toolsByCategory, type ToolCategory } from "@/lib/tools";
 import { ConnectButton } from "@/components/wallet/ConnectButton";
 
-const ORDER: ToolCategory[] = ["collector", "fxhash", "artist", "general", "advanced"];
+const ORDER: ToolCategory[] = ["collector", "artist", "general", "fxhash", "advanced"];
 
 export function Navbar() {
   const groups = toolsByCategory();
