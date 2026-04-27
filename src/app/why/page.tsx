@@ -30,11 +30,18 @@ export default function WhyPage() {
           <p>
             The largest closed-source toolkit in this space asks users to paste their{" "}
             <strong className="text-zinc-900 dark:text-zinc-100">private key</strong> into a web
-            form to enable certain features. Their FAQ has a whole section reassuring users it
-            isn&apos;t their seed phrase.{" "}
-            <em>It doesn&apos;t matter that it isn&apos;t a seed phrase.</em> A spending key in
-            browser localStorage is one XSS, one malicious extension, or one stale tab away from
-            being drained.
+            form. Their FAQ has a whole section reassuring users about it. Quoting verbatim:
+          </p>
+          <Quote>
+            you need to enter your private key, which is specific to that wallet address : IT&apos;S
+            NOT YOUR SEED WORDS
+          </Quote>
+          <p className="mt-3">
+            <em>It doesn&apos;t matter that it isn&apos;t a seed phrase.</em> A spending key in a
+            browser is one malicious extension, one XSS, or one screen-share away from being
+            drained. Their reassurance &mdash; &ldquo;your private key never leaves your
+            browser&rdquo; &mdash; treats &ldquo;your browser&rdquo; like a trust boundary. It
+            isn&apos;t. Every browser extension you&apos;ve ever installed sees your localStorage.
           </p>
           <p className="mt-3">
             We use{" "}
@@ -46,24 +53,30 @@ export default function WhyPage() {
             >
               Beacon SDK
             </a>
-            . Your keys live in your wallet (Temple, Kukai, Umami) and never enter our pages. Every
-            transaction is signed inside your wallet, with your wallet&apos;s confirmation,{" "}
+            . Your keys live in your wallet app (Temple, Kukai, Umami) and never enter our pages.
+            Every transaction is signed inside your wallet, with your wallet&apos;s confirmation,{" "}
             <strong className="text-zinc-900 dark:text-zinc-100">not in our JavaScript</strong>.
           </p>
         </Subsection>
 
         <Subsection title="2. We don't gate features behind owning specific NFTs.">
-          <p>
-            The same toolkit gates &ldquo;advanced&rdquo; features behind purchasing the
-            maintainer&apos;s artwork. Their access page literally says:
+          <p>The same toolkit gates &ldquo;advanced&rdquo; features behind owning the maintainer&apos;s artwork. Quoting verbatim:</p>
+          <Quote>
+            some advanced features are perks for collectors of my works: any person owning one or
+            more of 1/1 or multi-editions artworks
+          </Quote>
+          <p className="mt-3">
+            That&apos;s pay-to-tool with a buyback. Anyone the maintainer doesn&apos;t want using
+            their tools: blocked. Their answer to &ldquo;Can I be banned?&rdquo;:
           </p>
-          <blockquote className="mt-3 mb-3 border-l-4 border-amber-400 pl-4 italic text-zinc-700 dark:text-zinc-300">
-            &ldquo;The creator reserves the right to revoke access either individually or globally,
-            without any explanation.&rdquo;
-          </blockquote>
-          <p>
-            In plain English: you bought my NFT, I can take away your access whenever I want, for
-            any reason, and I owe you no explanation.
+          <Quote>
+            For whatever personal reason I could have, If I don&apos;t want anymore to share some or
+            all of these tools with you, then I will block your wallet, without any explaination or
+            notification
+          </Quote>
+          <p className="mt-3">
+            Buying their NFT &mdash; the entry fee for the &ldquo;perks&rdquo; &mdash; doesn&apos;t
+            change the kick-without-notice clause. You bought a token. You did not buy due process.
           </p>
           <p className="mt-3">
             Every tool here is free, forever, for everyone.{" "}
@@ -75,23 +88,73 @@ export default function WhyPage() {
 
         <Subsection title="3. We don't run a “concierge” autobuyer.">
           <p>
-            Some tools offer automatic NFT purchases when watched artists drop. To do that, the tool
-            needs a key that can sign without asking. Either:
+            Some tools offer automatic NFT purchases when watched artists drop. To do that, the
+            tool needs a key that can sign without asking the user each time. Either:
           </p>
           <ul className="mt-2 mb-3 list-disc pl-5 space-y-1">
-            <li>
-              It&apos;s stored client-side (the private-key-in-form anti-pattern from #1), or
-            </li>
-            <li>It&apos;s held server-side, in which case the tool&apos;s operator can drain you.</li>
+            <li>It&apos;s stored client-side (the private-key-in-form anti-pattern from #1), or</li>
+            <li>It&apos;s held server-side, where the tool&apos;s operator can drain you whenever they want.</li>
           </ul>
           <p>
-            Neither is acceptable. Our planned alternative is a watchlist + browser notification
-            tool: when a watched artist mints, you get a notification; you click Buy; your wallet
-            asks you to sign. The 1-second delay is the only meaningful difference between us and
-            them.{" "}
+            Our alternative is a watchlist: when a watched artist mints, the activity shows up in{" "}
+            <a href="/follow" className="text-blue-600 dark:text-blue-400 hover:underline">/follow</a>
+            ; you click Buy; your wallet asks you to sign. A few seconds slower than autobuy. Zero
+            key access required.{" "}
             <strong className="text-zinc-900 dark:text-zinc-100">We choose it.</strong>
           </p>
         </Subsection>
+
+        <Subsection title="4. We don't tell users they have no rights.">
+          <p>The same toolkit&apos;s FAQ says, verbatim:</p>
+          <Quote>
+            using any of these tools don&apos;t entitle you to any right or anything else, no
+            warranty of any kind is provided
+          </Quote>
+          <Quote>
+            I don&apos;t ask you anything, you don&apos;t have anything to pay, so I don&apos;t owe
+            you anything AT ALL
+          </Quote>
+          <p className="mt-3">
+            That&apos;s a maintainer publicly setting the floor for how they&apos;ll treat users:
+            no obligations, no notice, no recourse. Combined with #2, the position is &ldquo;buy my
+            NFT for the perks, and I owe you nothing for it, and I can revoke at any time.&rdquo;
+          </p>
+          <p className="mt-3">
+            We don&apos;t need to make these claims. The MIT license already says no warranty &mdash;{" "}
+            <a
+              href={`${GITHUB_URL}/blob/main/LICENSE`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              read it
+            </a>
+            . But it&apos;s the same disclaimer every open-source project ships with, and the
+            crucial difference is: <strong className="text-zinc-900 dark:text-zinc-100">you have
+            the source.</strong> If we ever stop maintaining it, you maintain it. If we ever start
+            misbehaving, you fork. Rights you derive from the GPL or MIT or BSD are real because
+            the code is the contract.
+          </p>
+        </Subsection>
+      </section>
+
+      <section className="mb-10">
+        <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-4">
+          Receipts
+        </h2>
+        <p className="mb-3">
+          Everything quoted above is from{" "}
+          <a
+            href="https://nftbiker.xyz/faq"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            nftbiker.xyz/faq
+          </a>{" "}
+          (verified at time of writing). Read the source for context. We&apos;re not paraphrasing
+          and we&apos;re not editing &mdash; the wording is theirs.
+        </p>
       </section>
 
       <section className="mb-10">
@@ -177,5 +240,13 @@ function Subsection({ title, children }: { title: string; children: React.ReactN
       <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{title}</h3>
       <div className="leading-relaxed">{children}</div>
     </div>
+  );
+}
+
+function Quote({ children }: { children: React.ReactNode }) {
+  return (
+    <blockquote className="mt-3 border-l-4 border-amber-400 pl-4 italic text-zinc-700 dark:text-zinc-300">
+      &ldquo;{children}&rdquo;
+    </blockquote>
   );
 }
