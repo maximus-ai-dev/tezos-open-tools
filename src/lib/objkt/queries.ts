@@ -1477,6 +1477,53 @@ export async function getFaFloor(
   return data.listing_active;
 }
 
+// Sales where a given wallet was the buyer (for /pnl cost-basis)
+
+const SALES_BY_BUYER_QUERY = /* GraphQL */ `
+  query SalesByBuyer($address: String!, $limit: Int!) {
+    listing_sale(
+      where: { buyer_address: { _eq: $address } }
+      order_by: { timestamp: desc }
+      limit: $limit
+    ) {
+      id
+      timestamp
+      price
+      price_xtz
+      marketplace_contract
+      seller_address
+      buyer_address
+      token {
+        token_id
+        fa_contract
+      }
+    }
+  }
+`;
+
+export interface BuyerSaleRow {
+  id: string;
+  timestamp: string;
+  price: number;
+  price_xtz: number | null;
+  marketplace_contract: string;
+  seller_address: string | null;
+  buyer_address: string | null;
+  token: { token_id: string; fa_contract: string } | null;
+}
+
+export async function getSalesByBuyer(
+  address: string,
+  opts: { limit?: number } = {},
+): Promise<BuyerSaleRow[]> {
+  const { limit = 1000 } = opts;
+  const data = await objktQuery<{ listing_sale: BuyerSaleRow[] }>(SALES_BY_BUYER_QUERY, {
+    address,
+    limit,
+  });
+  return data.listing_sale;
+}
+
 // Top holders within an FA contract (for /fxhash/holders)
 
 const FA_HOLDERS_QUERY = /* GraphQL */ `

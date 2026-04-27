@@ -199,6 +199,7 @@ function Dashboard({ data }: { data: DashboardData }) {
 
       <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
         {[
+          ["/pnl", "P&L"],
           ["/flex", "Flex"],
           ["/gallery", `?address=${data.address}`],
           ["/operators", "Operators"],
@@ -206,7 +207,6 @@ function Dashboard({ data }: { data: DashboardData }) {
           ["/migrate/transfer", "Transfer"],
           ["/swap/batch", "Batch swap"],
           ["/giveaway", "Giveaway"],
-          ["/compare", "Compare"],
         ].map(([href, label]) => (
           <Link
             key={href}

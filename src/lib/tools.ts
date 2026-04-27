@@ -23,6 +23,7 @@ export const TOOLS: Tool[] = [
   // ── COLLECTOR ──
   { slug: "history", href: "/history", name: "Token History", description: "Full transfer and sale history for any Tezos NFT.", category: "general", status: "ready" },
   { slug: "me", href: "/me", name: "Your wallet", description: "Snapshot of your holdings, listings, offers, and recent ops.", category: "collector", status: "ready" },
+  { slug: "pnl", href: "/pnl", name: "P&L", description: "Cost basis vs current floor for tokens you still hold.", category: "collector", status: "ready" },
   { slug: "live", href: "/live", name: "Live Feed", description: "Real-time marketplace activity (4s polling).", category: "collector", status: "ready" },
   { slug: "follow", href: "/follow", name: "Follow Feed", description: "Live sales involving wallets you've saved.", category: "collector", status: "ready" },
   { slug: "feed", href: "/feed", name: "Latest Mints", description: "New mints across the network.", category: "collector", status: "ready" },
