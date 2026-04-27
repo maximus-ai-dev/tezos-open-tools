@@ -1524,6 +1524,62 @@ export async function getSalesByBuyer(
   return data.listing_sale;
 }
 
+const SALES_BY_SELLER_QUERY = /* GraphQL */ `
+  query SalesBySeller($address: String!, $limit: Int!) {
+    listing_sale(
+      where: { seller_address: { _eq: $address } }
+      order_by: { timestamp: desc }
+      limit: $limit
+    ) {
+      id
+      timestamp
+      price
+      price_xtz
+      marketplace_contract
+      seller_address
+      buyer_address
+      token {
+        token_id
+        fa_contract
+        name
+        display_uri
+        thumbnail_uri
+        fa { name }
+      }
+    }
+  }
+`;
+
+export interface SellerSaleRow {
+  id: string;
+  timestamp: string;
+  price: number;
+  price_xtz: number | null;
+  marketplace_contract: string;
+  seller_address: string | null;
+  buyer_address: string | null;
+  token: {
+    token_id: string;
+    fa_contract: string;
+    name: string | null;
+    display_uri: string | null;
+    thumbnail_uri: string | null;
+    fa: { name: string | null } | null;
+  } | null;
+}
+
+export async function getSalesBySeller(
+  address: string,
+  opts: { limit?: number } = {},
+): Promise<SellerSaleRow[]> {
+  const { limit = 1000 } = opts;
+  const data = await objktQuery<{ listing_sale: SellerSaleRow[] }>(SALES_BY_SELLER_QUERY, {
+    address,
+    limit,
+  });
+  return data.listing_sale;
+}
+
 // Top holders within an FA contract (for /fxhash/holders)
 
 const FA_HOLDERS_QUERY = /* GraphQL */ `
