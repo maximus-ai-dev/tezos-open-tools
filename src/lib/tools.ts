@@ -69,6 +69,7 @@ export const TOOLS: Tool[] = [
   { slug: "discovery", href: "/discovery", name: "Linked Wallets", description: "Find wallets a target trades NFTs with most.", category: "general", status: "ready" },
   { slug: "gifted", href: "/gifted", name: "Gifted Tokens", description: "Heuristic detection of tokens received without payment.", category: "general", status: "ready" },
   { slug: "migrate-transfer", href: "/migrate/transfer", name: "Transfer Tokens", description: "Send NFTs to another wallet (batched FA2).", category: "general", status: "ready" },
+  { slug: "migrate-sweep", href: "/migrate/sweep", name: "Wallet Sweep", description: "Move every NFT and altcoin to another wallet — for cold-wallet migration.", category: "general", status: "ready" },
   { slug: "misc-referral", href: "/misc/referral", name: "Referral Fees", description: "Referral earnings on objkt sales.", category: "general", status: "ready" },
   { slug: "topsales", href: "/topsales", name: "Top Sales", description: "Highest-priced sales over a time window.", category: "general", status: "ready" },
   { slug: "barter", href: "/barter", name: "Barter", description: "Trade tokens directly with another wallet.", category: "general", status: "stub", stubReason: "No canonical Tezos NFT barter contract — none of the major marketplaces (objkt, fxhash, Versum, HEN, Teia) expose a 2-party atomic swap. Would need to deploy our own escrow contract or pick a third-party one." },

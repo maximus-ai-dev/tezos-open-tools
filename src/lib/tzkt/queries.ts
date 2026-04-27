@@ -134,6 +134,42 @@ export function getContractEvents(
   });
 }
 
+// All non-zero token balances held by an account — across FA1.2 and FA2,
+// including NFTs, fungibles, and scam drops. Used by /migrate/sweep.
+export interface TzktBalance {
+  account: { address: string };
+  token: {
+    id: number;
+    contract: { address: string; alias?: string | null };
+    tokenId: string;
+    standard: "fa1.2" | "fa2" | string;
+    metadata?: {
+      name?: string | null;
+      symbol?: string | null;
+      decimals?: string | null;
+      thumbnailUri?: string | null;
+      displayUri?: string | null;
+      artifactUri?: string | null;
+    } | null;
+  };
+  balance: string;
+  firstTime?: string;
+  lastTime?: string;
+}
+
+export function getAccountTokenBalances(
+  account: string,
+  opts: { limit?: number } = {},
+): Promise<TzktBalance[]> {
+  const { limit = 10000 } = opts;
+  return tzktFetch<TzktBalance[]>("/tokens/balances", {
+    account,
+    "balance.gt": 0,
+    "sort.desc": "lastTime",
+    limit,
+  });
+}
+
 // Returns FA1.2 / FA2 token transfers where the given account is on the chosen side.
 export function getAccountTokenTransfers({
   account,

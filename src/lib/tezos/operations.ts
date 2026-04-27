@@ -48,6 +48,35 @@ export async function buildFa2BatchTransfer(
   return ops;
 }
 
+export interface Fa12Transfer {
+  fa: string;
+  to: string;
+  amount: string; // smallest units; bigint-safe as a string
+}
+
+// FA1.2 (single-token contracts: USDC, kUSD, etc.) use a different `transfer` shape:
+//   transfer(from :address, to :address, value :nat)
+// vs FA2's batched `transfer([{from_, txs:[{to_, token_id, amount}]}])`.
+// One op per (contract, transfer) — these don't batch within a single contract call.
+export async function buildFa12BatchTransfer(
+  sender: string,
+  transfers: Fa12Transfer[],
+): Promise<WalletParamsWithKind[]> {
+  const tezos = getTezos();
+  const ops: WalletParamsWithKind[] = [];
+  for (const t of transfers) {
+    const contract = await tezos.wallet.at(t.fa);
+    const params = contract.methodsObject
+      .transfer({ from: sender, to: t.to, value: t.amount })
+      .toTransferParams();
+    ops.push({
+      kind: "transaction" as const,
+      ...params,
+    } as WalletParamsWithKind);
+  }
+  return ops;
+}
+
 export interface SendResult {
   opHash: string;
 }
