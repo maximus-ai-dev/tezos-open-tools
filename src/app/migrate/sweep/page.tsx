@@ -101,13 +101,6 @@ export default function SweepPage() {
     });
   }
 
-  function selectAll() {
-    if (!data) return;
-    bulkToggle([...data.fa12, ...data.fa2_fungibles, ...data.fa2_nfts], true);
-  }
-  function deselectAll() {
-    setSelected(new Set());
-  }
 
   const allAssets = useMemo<SweepAsset[]>(() => {
     if (!data) return [];
@@ -296,27 +289,9 @@ export default function SweepPage() {
           </section>
 
           <section className="mt-6">
-            <div className="flex items-baseline justify-between gap-2 mb-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
-                Selected ({selectedAssets.length})
-              </h2>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  onClick={selectAll}
-                  className="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                >
-                  Select all
-                </button>
-                <button
-                  type="button"
-                  onClick={deselectAll}
-                  className="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                >
-                  Deselect all
-                </button>
-              </div>
-            </div>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              Selected ({selectedAssets.length})
+            </h2>
             <p className="text-xs text-zinc-500">
               {counts.nft} NFT{counts.nft === 1 ? "" : "s"}, {counts.fungible} fungible token
               {counts.fungible === 1 ? "" : "s"}
