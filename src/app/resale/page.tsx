@@ -3,6 +3,7 @@ import { PageShell } from "@/components/common/PageShell";
 import { WalletInputForm } from "@/components/common/WalletInputForm";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { PinButton } from "@/components/common/PinButton";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 import { isTezosAddress } from "@/lib/utils";
 
@@ -86,6 +87,9 @@ async function Holdings({ address }: { address: string }) {
                 listing ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace" : null
               }
               badge={h.quantity > 1 ? `×${h.quantity}` : null}
+              footer={
+                <PinButton fa={h.token.fa_contract} tokenId={h.token.token_id} />
+              }
             />
           );
         })}

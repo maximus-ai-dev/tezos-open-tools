@@ -553,6 +553,50 @@ export async function getSalesInvolving(
   return data.listing_sale;
 }
 
+// Active FA2 operator grants for a wallet (for /operators).
+// Each row: this wallet has authorized `operator_address` to move
+// (token.fa_contract, token.token_id) on its behalf.
+
+export interface OperatorGrant {
+  id: string;
+  operator_address: string;
+  token: {
+    token_id: string;
+    fa_contract: string;
+    name: string | null;
+  } | null;
+}
+
+const OPERATORS_QUERY = /* GraphQL */ `
+  query Operators($address: String!, $limit: Int!) {
+    token_operator(
+      where: { owner_address: { _eq: $address }, allowed: { _eq: true } }
+      order_by: { id: desc }
+      limit: $limit
+    ) {
+      id
+      operator_address
+      token {
+        token_id
+        fa_contract
+        name
+      }
+    }
+  }
+`;
+
+export async function getActiveOperators(
+  address: string,
+  opts: { limit?: number } = {},
+): Promise<OperatorGrant[]> {
+  const { limit = 500 } = opts;
+  const data = await objktQuery<{ token_operator: OperatorGrant[] }>(OPERATORS_QUERY, {
+    address,
+    limit,
+  });
+  return data.token_operator;
+}
+
 // Latest mints by any of a set of creators (for /artist/follow).
 const CREATIONS_BY_AUTHORS_QUERY = /* GraphQL */ `
   query CreationsByAuthors($addresses: [String!]!, $limit: Int!) {

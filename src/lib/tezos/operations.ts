@@ -60,6 +60,50 @@ export async function sendBatch(ops: WalletParamsWithKind[]): Promise<SendResult
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Bulk revoke FA2 operator approvals (for /operators).
+//
+// Each grant is identified by (fa, owner=sender, operator, tokenId). We
+// build update_operators(remove) calls grouped per FA contract so the wallet
+// only sees one signing prompt per contract.
+
+export interface RevocableOperatorGrant {
+  fa: string;
+  tokenId: string;
+  operatorAddress: string;
+}
+
+export async function buildRevokeOperatorsBatch(
+  ownerAddress: string,
+  grants: RevocableOperatorGrant[],
+): Promise<WalletParamsWithKind[]> {
+  if (grants.length === 0) return [];
+  const tezos = getTezos();
+  const ops: WalletParamsWithKind[] = [];
+
+  // Group by FA contract — one update_operators per contract is enough.
+  const byFa = new Map<string, RevocableOperatorGrant[]>();
+  for (const g of grants) {
+    const arr = byFa.get(g.fa) ?? [];
+    arr.push(g);
+    byFa.set(g.fa, arr);
+  }
+
+  for (const [fa, items] of byFa) {
+    const faContract = await tezos.wallet.at(fa);
+    const removes = items.map((g) => ({
+      remove_operator: {
+        owner: ownerAddress,
+        operator: g.operatorAddress,
+        token_id: Number(g.tokenId),
+      },
+    }));
+    const params = faContract.methodsObject.update_operators(removes).toTransferParams();
+    ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
+  }
+  return ops;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Marketplace listing cancellation
 //
 // Most objkt marketplaces use `retract_ask(nat)`; HEN/Teia use `cancel_swap(nat)`.

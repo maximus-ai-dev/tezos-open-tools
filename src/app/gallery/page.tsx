@@ -4,6 +4,7 @@ import { WalletInputForm } from "@/components/common/WalletInputForm";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
 import { WatchButton } from "@/components/common/WatchButton";
+import { PinButton } from "@/components/common/PinButton";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 import { isTezosAddress } from "@/lib/utils";
 
@@ -69,6 +70,7 @@ async function Creations({ address }: { address: string }) {
                 listing ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace" : null
               }
               badge={t.supply !== null ? `ed ${t.supply}` : null}
+              footer={<PinButton fa={t.fa_contract} tokenId={t.token_id} />}
             />
           );
         })}
