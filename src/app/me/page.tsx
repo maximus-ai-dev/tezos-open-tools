@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import { WatchlistFeed } from "@/components/common/WatchlistFeed";
 import { formatTez, shortAddress } from "@/lib/utils";
 import { MARKETPLACE_NAMES, objktProfileLink } from "@/lib/constants";
 import type {
@@ -125,6 +126,8 @@ function Dashboard({ data }: { data: DashboardData }) {
           Share public profile →
         </Link>
       </div>
+
+      <WatchlistFeed />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         <Card label="Tokens held" primary={String(heldCount)} secondary={`floor sum ≈ ${formatTez(heldFloorSum)}`} href="/resale" />

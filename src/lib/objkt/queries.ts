@@ -540,13 +540,13 @@ const SALES_INVOLVING_QUERY = /* GraphQL */ `
 
 export async function getSalesInvolving(
   addresses: string[],
-  opts: { hours?: number; limit?: number } = {},
+  opts: { hours?: number; sinceISO?: string; limit?: number } = {},
 ): Promise<SaleEvent[]> {
   if (addresses.length === 0) return [];
-  const { hours = 24, limit = 100 } = opts;
-  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+  const { hours = 24, sinceISO, limit = 100 } = opts;
+  const since = sinceISO ?? new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
   const data = await objktQuery<{ listing_sale: SaleEvent[] }>(SALES_INVOLVING_QUERY, {
-    since: since.toISOString(),
+    since,
     addresses,
     limit,
   });
