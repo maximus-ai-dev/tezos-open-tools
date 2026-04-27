@@ -18,6 +18,8 @@ export interface PnlRow {
   floor_marketplace: string | null;
   pnl_mutez: number | null;
   pnl_pct: number | null;
+  /** Floor is >100× cost (e.g. artist set absurd "make-offer-only" BIN). Excluded from totals. */
+  bin_trap: boolean;
 }
 
 export interface RealizedRow {
@@ -46,6 +48,7 @@ export interface PnlResult {
     pnl: number;
     priced: number;
     unpriced: number;
+    bin_traps: number;
   };
   realized_totals: {
     cost: number;
@@ -141,6 +144,10 @@ export async function GET(request: Request) {
     const floorMarket = h.token.listings_active[0]?.marketplace_contract ?? null;
     const pnl = cost !== null && floor !== null ? floor - cost : null;
     const pnlPct = pnl !== null && cost && cost > 0 ? (pnl / cost) * 100 : null;
+    // BIN trap: floor >100× cost basis. Almost always an artist's "make-offer-only"
+    // sky-high BIN listing — keeps the row visible but excludes from totals so a single
+    // 2,000,000 ꜩ listing doesn't dominate a portfolio summary.
+    const binTrap = cost !== null && cost > 0 && floor !== null && floor > cost * 100;
     return {
       fa_contract: h.token.fa_contract,
       token_id: h.token.token_id,
@@ -155,6 +162,7 @@ export async function GET(request: Request) {
       floor_marketplace: floorMarket,
       pnl_mutez: pnl,
       pnl_pct: pnlPct,
+      bin_trap: binTrap,
     };
   });
 
@@ -162,8 +170,13 @@ export async function GET(request: Request) {
   let floor = 0;
   let priced = 0;
   let unpriced = 0;
+  let binTraps = 0;
   for (const r of rows) {
     if (r.cost_basis_mutez !== null && r.floor_mutez !== null) {
+      if (r.bin_trap) {
+        binTraps++;
+        continue;
+      }
       cost += r.cost_basis_mutez;
       floor += r.floor_mutez;
       priced++;
@@ -191,7 +204,7 @@ export async function GET(request: Request) {
     alias: holdings.alias,
     rows,
     realized,
-    totals: { cost, floor, pnl: floor - cost, priced, unpriced },
+    totals: { cost, floor, pnl: floor - cost, priced, unpriced, bin_traps: binTraps },
     realized_totals: {
       cost: rCost,
       proceeds: rProceeds,

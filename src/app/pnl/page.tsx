@@ -151,7 +151,11 @@ export default function PnlPage() {
                 <Stat
                   label="No cost basis"
                   value={String(data.totals.unpriced)}
-                  sub="mint / gift / pre-objkt"
+                  sub={
+                    data.totals.bin_traps > 0
+                      ? `${data.totals.bin_traps} BIN-trap${data.totals.bin_traps === 1 ? "" : "s"} also excluded`
+                      : "mint / gift / pre-objkt"
+                  }
                 />
               </div>
 
@@ -255,8 +259,16 @@ function Row({ row }: { row: PnlRow }) {
       </td>
       <td className="px-2 py-2 text-right whitespace-nowrap">
         {row.floor_mutez !== null ? (
-          <span title={MARKETPLACE_NAMES[row.floor_marketplace ?? ""] ?? row.floor_marketplace ?? ""}>
+          <span
+            className={row.bin_trap ? "text-amber-700 dark:text-amber-400" : ""}
+            title={
+              row.bin_trap
+                ? `>100× cost — likely a 'make-offer-only' BIN. Excluded from totals.`
+                : MARKETPLACE_NAMES[row.floor_marketplace ?? ""] ?? row.floor_marketplace ?? ""
+            }
+          >
             {formatTez(row.floor_mutez)}
+            {row.bin_trap && <span className="ml-1 text-[10px] uppercase">⚠ BIN</span>}
           </span>
         ) : (
           <span className="text-zinc-400">unlisted</span>
