@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { buildBatchListings, sendBatch } from "@/lib/tezos/operations";
 import type { HoldingsResult, HeldToken } from "@/lib/objkt";
 import { ipfsToHttp, formatTez } from "@/lib/utils";
@@ -22,6 +23,7 @@ export default function BatchSwapPage() {
   const [data, setData] = useState<{ address: string; holdings: HoldingsResult | null } | null>(null);
   const [pending, setPending] = useState<Map<string, ListingRow>>(new Map());
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const loading = !!address && data?.address !== address;
@@ -95,13 +97,18 @@ export default function BatchSwapPage() {
     return { ok: true };
   }
 
-  async function send() {
+  function tryOpenConfirm() {
     setResult(null);
     const v = validate();
     if (!v.ok) {
       setResult({ ok: false, message: v.reason ?? "Invalid input" });
       return;
     }
+    setConfirmOpen(true);
+  }
+
+  async function send() {
+    setConfirmOpen(false);
     setBusy(true);
     try {
       const listings = [...pending.values()].map((r) => ({
@@ -264,7 +271,7 @@ export default function BatchSwapPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => void send()}
+                  onClick={tryOpenConfirm}
                   disabled={busy}
                   className="mt-3 w-full px-4 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 font-medium hover:opacity-90 disabled:opacity-60"
                 >
@@ -276,6 +283,60 @@ export default function BatchSwapPage() {
           </aside>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`List ${pending.size} token${pending.size === 1 ? "" : "s"}?`}
+        confirmLabel={`List ${pending.size} token${pending.size === 1 ? "" : "s"}`}
+        busy={busy}
+        onConfirm={() => void send()}
+        onCancel={() => setConfirmOpen(false)}
+        warning={
+          <>
+            Listing grants the marketplace operator rights on each token. Buyers can purchase any
+            edition at the listed price until you cancel.
+          </>
+        }
+      >
+        <p className="mb-3 text-zinc-700 dark:text-zinc-300">
+          {pending.size} ask op{pending.size === 1 ? "" : "s"} on objkt v6.2 + operator approval per
+          FA contract. Total potential proceeds:{" "}
+          <strong>{formatTez(totalIfAllSold * 1_000_000)}</strong> if every edition sells.
+        </p>
+        <ul className="space-y-2">
+          {[...pending.values()].map((r) => {
+            const k = `${r.fa}:${r.tokenId}`;
+            return (
+              <li
+                key={k}
+                className="flex items-center gap-3 p-2 rounded border border-zinc-200 dark:border-zinc-800"
+              >
+                <span className="w-10 h-10 rounded bg-zinc-100 dark:bg-zinc-900 overflow-hidden shrink-0">
+                  {r.thumb && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.thumb} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  )}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="truncate text-sm font-medium">
+                    {r.name ?? `#${r.tokenId}`}
+                  </div>
+                  <div className="text-xs text-zinc-500">
+                    {r.editions} edition{Number(r.editions) === 1 ? "" : "s"} ×{" "}
+                    {Number(r.priceTez).toLocaleString()} ꜩ
+                  </div>
+                </div>
+                <div className="font-semibold whitespace-nowrap">
+                  {(Number(r.priceTez) * Number(r.editions)).toLocaleString()} ꜩ
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-3 text-xs text-zinc-500">
+          Beacon will show the operation params again before final signing.
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }

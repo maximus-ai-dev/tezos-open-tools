@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { buildCancelBatch, isCancellable, sendBatch } from "@/lib/tezos/operations";
 import {
   MARKETPLACE_NAMES,
@@ -15,6 +16,7 @@ export default function ManageSwapsPage() {
   const [data, setData] = useState<{ address: string; listings: SellerListing[] } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const loading = !!address && data?.address !== address;
@@ -50,14 +52,24 @@ export default function ManageSwapsPage() {
     setSelected(new Set(listings.filter((l) => isCancellable(l.marketplace_contract)).map((l) => l.id)));
   }
 
-  async function cancel() {
+  const toCancel = useMemo(
+    () => (listings ?? []).filter((l) => selected.has(l.id) && l.bigmap_key !== null),
+    [listings, selected],
+  );
+
+  function tryOpenConfirm() {
     setResult(null);
     if (!listings || !address) return;
-    const toCancel = listings.filter((l) => selected.has(l.id) && l.bigmap_key !== null);
     if (toCancel.length === 0) {
       setResult({ ok: false, message: "Select at least one cancellable listing." });
       return;
     }
+    setConfirmOpen(true);
+  }
+
+  async function cancel() {
+    setConfirmOpen(false);
+    if (!listings || !address) return;
     setBusy(true);
     try {
       const ops = await buildCancelBatch(
@@ -118,7 +130,7 @@ export default function ManageSwapsPage() {
             </button>
             <button
               type="button"
-              onClick={() => void cancel()}
+              onClick={tryOpenConfirm}
               disabled={busy || selected.size === 0}
               className="ml-auto px-4 py-1.5 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50"
             >
@@ -201,6 +213,32 @@ export default function ManageSwapsPage() {
           {result && <Result result={result} />}
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Cancel ${toCancel.length} listing${toCancel.length === 1 ? "" : "s"}?`}
+        confirmLabel={`Cancel ${toCancel.length} listing${toCancel.length === 1 ? "" : "s"}`}
+        tone="danger"
+        busy={busy}
+        onConfirm={() => void cancel()}
+        onCancel={() => setConfirmOpen(false)}
+      >
+        <p className="mb-3 text-zinc-700 dark:text-zinc-300">
+          The marketplace will reject any new buys at these prices. You can re-list later from{" "}
+          <a className="underline" href="/swap/batch">Batch Swap</a> or directly on objkt.
+        </p>
+        <ul className="space-y-1">
+          {toCancel.map((l) => (
+            <li key={l.id} className="flex justify-between gap-2 text-xs">
+              <span className="truncate">{l.token?.name ?? `#${l.token?.token_id}`}</span>
+              <span className="text-zinc-500 whitespace-nowrap">
+                {MARKETPLACE_NAMES[l.marketplace_contract] ?? "marketplace"} ·{" "}
+                {formatTez(l.price)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </ConfirmDialog>
     </div>
   );
 }

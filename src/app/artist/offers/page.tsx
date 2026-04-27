@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { buildAcceptOffersBatch, isAcceptableOffer, sendBatch } from "@/lib/tezos/operations";
 import {
   MARKETPLACE_NAMES,
@@ -22,6 +23,7 @@ export default function ArtistOffersPage() {
   const [data, setData] = useState<{ address: string; offers: OfferActive[] } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const loading = !!address && data?.address !== address;
@@ -64,10 +66,19 @@ export default function ArtistOffersPage() {
     });
   }
 
+  const toAccept = useMemo(
+    () => acceptable.filter((o) => selected.has(o.id)),
+    [acceptable, selected],
+  );
+  const totalToReceive = useMemo(
+    () => toAccept.reduce((s, o) => s + (o.price_xtz ?? o.price ?? 0), 0),
+    [toAccept],
+  );
+
   async function accept() {
+    setConfirmOpen(false);
     setResult(null);
     if (!address || !offers) return;
-    const toAccept = acceptable.filter((o) => selected.has(o.id));
     if (toAccept.length === 0) {
       setResult({ ok: false, message: "Select at least one acceptable offer." });
       return;
@@ -147,7 +158,7 @@ export default function ArtistOffersPage() {
             </button>
             <button
               type="button"
-              onClick={() => void accept()}
+              onClick={() => setConfirmOpen(true)}
               disabled={busy || selected.size === 0}
               className="ml-auto px-4 py-1.5 rounded-md bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50"
             >
@@ -258,6 +269,66 @@ export default function ArtistOffersPage() {
           {result && <Result result={result} />}
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Accept ${toAccept.length} offer${toAccept.length === 1 ? "" : "s"}?`}
+        confirmLabel={`Accept ${toAccept.length} offer${toAccept.length === 1 ? "" : "s"}`}
+        tone="warn"
+        busy={busy}
+        onConfirm={() => void accept()}
+        onCancel={() => setConfirmOpen(false)}
+        warning={
+          <>
+            <strong>Final sale.</strong> Accepting transfers each token to its buyer immediately.
+            You can&apos;t undo this once signed. Verify each price below carefully.
+          </>
+        }
+      >
+        <p className="mb-3 text-zinc-700 dark:text-zinc-300">
+          You&apos;ll receive a total of{" "}
+          <strong>{formatTez(totalToReceive)}</strong> across these{" "}
+          {toAccept.length === 1 ? "offer" : "offers"}:
+        </p>
+        <ul className="space-y-2">
+          {toAccept.map((o) => {
+            const tok = o.token!;
+            const thumb = ipfsToHttp(tok.thumbnail_uri) ?? ipfsToHttp(tok.display_uri);
+            return (
+              <li
+                key={o.id}
+                className="flex items-center gap-3 p-2 rounded border border-zinc-200 dark:border-zinc-800"
+              >
+                <span className="w-10 h-10 rounded bg-zinc-100 dark:bg-zinc-900 overflow-hidden shrink-0">
+                  {thumb && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={thumb} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  )}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="truncate text-sm font-medium">
+                    {tok.name ?? `#${tok.token_id}`}
+                  </div>
+                  <div className="font-mono text-xs text-zinc-500 truncate" title={o.buyer_address ?? ""}>
+                    buyer: {o.buyer?.alias ?? shortAddress(o.buyer_address ?? "")}
+                  </div>
+                </div>
+                <div className="text-right whitespace-nowrap">
+                  <div className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {formatTez(o.price_xtz ?? o.price)}
+                  </div>
+                  <div className="text-[10px] text-zinc-500">
+                    {MARKETPLACE_NAMES[o.marketplace_contract!] ?? "marketplace"}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-3 text-xs text-zinc-500">
+          Beacon will show the operation params again before final signing.
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }

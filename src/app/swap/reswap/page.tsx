@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import {
   buildBatchListings,
   buildCancelBatch,
@@ -29,6 +30,7 @@ export default function BatchReswapPage() {
   const [data, setData] = useState<{ address: string; listings: SellerListing[] } | null>(null);
   const [rows, setRows] = useState<Map<string, RowState>>(new Map());
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const loading = !!address && data?.address !== address;
@@ -73,19 +75,13 @@ export default function BatchReswapPage() {
     return { cancel, reprice, total: cancel + reprice };
   }, [rows]);
 
-  async function send() {
+  function tryOpenConfirm() {
     setResult(null);
-    if (!address || !listings) return;
+    if (!listings) return;
     if (counts.total === 0) {
       setResult({ ok: false, message: "Mark at least one listing to cancel or reprice." });
       return;
     }
-
-    // Build the batch: cancels first (any marketplace we support), then re-asks on objkt v6.2
-    // for the repriced rows.
-    const cancellableSelected: SellerListing[] = [];
-    const repriceTargets: SellerListing[] = [];
-
     for (const l of listings) {
       const r = rowOf(l.id);
       if (r.state === "keep") continue;
@@ -96,15 +92,41 @@ export default function BatchReswapPage() {
         });
         return;
       }
-      cancellableSelected.push(l);
       if (r.state === "reprice") {
         const np = Number(r.newPriceTez);
         if (!Number.isFinite(np) || np <= 0) {
           setResult({ ok: false, message: "Bad new price on a row." });
           return;
         }
-        repriceTargets.push(l);
       }
+    }
+    setConfirmOpen(true);
+  }
+
+  const planned = useMemo(() => {
+    if (!listings) return { cancels: [], reprices: [] };
+    const cancels: SellerListing[] = [];
+    const reprices: SellerListing[] = [];
+    for (const l of listings) {
+      const r = rowOf(l.id);
+      if (r.state === "cancel") cancels.push(l);
+      if (r.state === "reprice") reprices.push(l);
+    }
+    return { cancels, reprices };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listings, rows]);
+
+  async function send() {
+    setConfirmOpen(false);
+    if (!address || !listings) return;
+
+    const cancellableSelected: SellerListing[] = [];
+    const repriceTargets: SellerListing[] = [];
+    for (const l of listings) {
+      const r = rowOf(l.id);
+      if (r.state === "keep") continue;
+      cancellableSelected.push(l);
+      if (r.state === "reprice") repriceTargets.push(l);
     }
 
     setBusy(true);
@@ -178,7 +200,7 @@ export default function BatchReswapPage() {
             </button>
             <button
               type="button"
-              onClick={() => void send()}
+              onClick={tryOpenConfirm}
               disabled={busy || counts.total === 0}
               className="ml-auto px-4 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 text-sm font-medium hover:opacity-90 disabled:opacity-50"
             >
@@ -289,6 +311,60 @@ export default function BatchReswapPage() {
           {result && <Result result={result} />}
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Confirm batch update"
+        confirmLabel={`Sign — ${counts.cancel} cancel${counts.cancel === 1 ? "" : "s"}, ${counts.reprice} repric${counts.reprice === 1 ? "ing" : "ings"}`}
+        busy={busy}
+        onConfirm={() => void send()}
+        onCancel={() => setConfirmOpen(false)}
+        warning={
+          <>
+            Cancellations are immediate. Re-listings post fresh asks on objkt v6.2 — anyone can buy
+            them at the new price. Verify each price below.
+          </>
+        }
+      >
+        {planned.cancels.length > 0 && (
+          <div className="mb-3">
+            <h3 className="font-semibold mb-1 text-red-700 dark:text-red-400">
+              Cancel ({planned.cancels.length})
+            </h3>
+            <ul className="space-y-1">
+              {planned.cancels.map((l) => (
+                <li key={l.id} className="flex justify-between gap-2 text-xs">
+                  <span className="truncate">{l.token?.name ?? `#${l.token?.token_id}`}</span>
+                  <span className="text-zinc-500 whitespace-nowrap">{formatTez(l.price)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {planned.reprices.length > 0 && (
+          <div>
+            <h3 className="font-semibold mb-1 text-blue-700 dark:text-blue-400">
+              Reprice ({planned.reprices.length})
+            </h3>
+            <ul className="space-y-1">
+              {planned.reprices.map((l) => {
+                const np = Number(rowOf(l.id).newPriceTez);
+                return (
+                  <li key={l.id} className="flex justify-between gap-2 text-xs">
+                    <span className="truncate">{l.token?.name ?? `#${l.token?.token_id}`}</span>
+                    <span className="text-zinc-500 whitespace-nowrap">
+                      {formatTez(l.price)} → <strong>{np} ꜩ</strong>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+        <p className="mt-3 text-xs text-zinc-500">
+          Beacon will show the operation params again before final signing.
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }

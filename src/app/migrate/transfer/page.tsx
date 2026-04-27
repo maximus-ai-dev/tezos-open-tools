@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { buildFa2BatchTransfer, sendBatch } from "@/lib/tezos/operations";
-import { isContractAddress, isTezosAddress, parseTokenInput } from "@/lib/utils";
+import { isContractAddress, isTezosAddress, parseTokenInput, shortAddress } from "@/lib/utils";
 
 interface Row {
   id: number;
@@ -22,6 +23,7 @@ export default function TransferTokensPage() {
   const { address, status, connect } = useWallet();
   const [rows, setRows] = useState<Row[]>([newRow()]);
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   function updateRow(id: number, patch: Partial<Row>) {
@@ -49,7 +51,7 @@ export default function TransferTokensPage() {
     return { ok: true };
   }
 
-  async function send() {
+  function tryOpenConfirm() {
     setResult(null);
     if (!address) {
       setResult({ ok: false, message: "Connect your wallet first." });
@@ -60,6 +62,12 @@ export default function TransferTokensPage() {
       setResult({ ok: false, message: v.reason ?? "Invalid input" });
       return;
     }
+    setConfirmOpen(true);
+  }
+
+  async function send() {
+    setConfirmOpen(false);
+    if (!address) return;
     setBusy(true);
     try {
       const ops = await buildFa2BatchTransfer(
@@ -132,7 +140,7 @@ export default function TransferTokensPage() {
             </button>
             <button
               type="button"
-              onClick={() => void send()}
+              onClick={tryOpenConfirm}
               disabled={busy}
               className="px-4 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 text-sm font-medium hover:opacity-90 disabled:opacity-60"
             >
@@ -166,6 +174,39 @@ export default function TransferTokensPage() {
           )}
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Confirm ${rows.length} transfer${rows.length === 1 ? "" : "s"}`}
+        confirmLabel={`Sign ${rows.length} transfer${rows.length === 1 ? "" : "s"}`}
+        tone="warn"
+        busy={busy}
+        onConfirm={() => void send()}
+        onCancel={() => setConfirmOpen(false)}
+        warning={<>Transfers are irreversible. Verify each destination address below.</>}
+      >
+        <ul className="space-y-2">
+          {rows.map((r) => (
+            <li
+              key={r.id}
+              className="flex justify-between items-center gap-3 p-2 rounded border border-zinc-200 dark:border-zinc-800 text-sm"
+            >
+              <div className="min-w-0">
+                <div className="font-mono text-xs truncate" title={`${r.fa}:${r.tokenId}`}>
+                  {r.fa.slice(0, 10)}…:{r.tokenId}
+                </div>
+                <div className="text-xs text-zinc-500">
+                  {r.amount} edition{Number(r.amount) === 1 ? "" : "s"} →{" "}
+                  <span className="font-mono" title={r.to}>{shortAddress(r.to)}</span>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-xs text-zinc-500">
+          Beacon will show the operation params again before final signing.
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }

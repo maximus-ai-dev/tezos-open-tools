@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { buildFa2BatchTransfer, sendBatch } from "@/lib/tezos/operations";
-import { isContractAddress, isTezosAddress, parseTokenInput } from "@/lib/utils";
+import { isContractAddress, isTezosAddress, parseTokenInput, shortAddress } from "@/lib/utils";
 
 export default function GiveawayPage() {
   const { address, status, connect } = useWallet();
@@ -11,6 +12,7 @@ export default function GiveawayPage() {
   const [recipients, setRecipients] = useState("");
   const [amountEach, setAmountEach] = useState("1");
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const parsed = useMemo(() => parseTokenInput(tokenInput), [tokenInput]);
@@ -25,7 +27,7 @@ export default function GiveawayPage() {
   const validRecipients = recipientList.filter(isTezosAddress);
   const invalidRecipients = recipientList.filter((r) => !isTezosAddress(r));
 
-  async function send() {
+  function tryOpenConfirm() {
     setResult(null);
     if (!address) {
       setResult({ ok: false, message: "Connect your wallet first." });
@@ -44,6 +46,13 @@ export default function GiveawayPage() {
       setResult({ ok: false, message: "Amount per recipient must be a positive integer." });
       return;
     }
+    setConfirmOpen(true);
+  }
+
+  async function send() {
+    setConfirmOpen(false);
+    if (!address || !parsed) return;
+    const qty = Number(amountEach);
     setBusy(true);
     try {
       const ops = await buildFa2BatchTransfer(
@@ -135,7 +144,7 @@ export default function GiveawayPage() {
           <div className="mt-6">
             <button
               type="button"
-              onClick={() => void send()}
+              onClick={tryOpenConfirm}
               disabled={busy}
               className="px-4 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 font-medium hover:opacity-90 disabled:opacity-60"
             >
@@ -147,6 +156,46 @@ export default function GiveawayPage() {
           {result && <Result result={result} />}
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Send ${amountEach} edition${Number(amountEach) === 1 ? "" : "s"} to ${validRecipients.length} wallet${validRecipients.length === 1 ? "" : "s"}?`}
+        confirmLabel={`Send ${validRecipients.length * Number(amountEach)} editions`}
+        tone="warn"
+        busy={busy}
+        onConfirm={() => void send()}
+        onCancel={() => setConfirmOpen(false)}
+        warning={<>Transfers are irreversible. Double-check every address below.</>}
+      >
+        {parsed && (
+          <p className="mb-3 text-zinc-700 dark:text-zinc-300">
+            Token: <code className="font-mono text-xs">{parsed.fa.slice(0, 10)}…:{parsed.tokenId}</code>
+            <br />
+            Sending <strong>{amountEach}</strong> edition
+            {Number(amountEach) === 1 ? "" : "s"} each to {validRecipients.length} recipient
+            {validRecipients.length === 1 ? "" : "s"} ={" "}
+            <strong>{validRecipients.length * Number(amountEach)}</strong> editions total.
+          </p>
+        )}
+        <div className="rounded border border-zinc-200 dark:border-zinc-800 max-h-48 overflow-y-auto">
+          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800 font-mono text-xs">
+            {validRecipients.map((r) => (
+              <li key={r} className="px-3 py-1.5" title={r}>
+                {shortAddress(r)} <span className="text-zinc-500">— {amountEach} ed</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        {invalidRecipients.length > 0 && (
+          <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+            {invalidRecipients.length} invalid recipient{invalidRecipients.length === 1 ? "" : "s"}{" "}
+            will be skipped.
+          </p>
+        )}
+        <p className="mt-3 text-xs text-zinc-500">
+          Beacon will show the operation params again before final signing.
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }
