@@ -1,6 +1,7 @@
 import { getFaInfo, getVariations, type VariationSort } from "@/lib/objkt";
 import { PageShell } from "@/components/common/PageShell";
 import { WalletInputForm } from "@/components/common/WalletInputForm";
+import { BuyButton } from "@/components/common/BuyButton";
 import {
   MARKETPLACE_NAMES,
   objktTokenLink,
@@ -146,6 +147,17 @@ async function Variations({ fa, sort }: { fa: string; sort: VariationSort }) {
                     <span className="text-zinc-400">no active listing</span>
                   )}
                 </div>
+                {listing && listing.bigmap_key !== null && (
+                  <div className="mt-1.5">
+                    <BuyButton
+                      marketplaceContract={listing.marketplace_contract}
+                      askId={listing.bigmap_key}
+                      priceMutez={listing.price}
+                      amountAvailable={listing.amount_left}
+                      tokenName={t.name}
+                    />
+                  </div>
+                )}
                 <div className="flex items-baseline justify-between gap-2 text-[10px] text-zinc-500">
                   {t.highest_offer !== null && t.highest_offer > 0 && (
                     <span>top offer {formatTez(t.highest_offer)}</span>

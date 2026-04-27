@@ -115,6 +115,64 @@ export interface AcceptableOffer {
  * the operator — so the user's permission state ends as it began.
  */
 // ──────────────────────────────────────────────────────────────────────────────
+// Buy / fulfill_ask (for inline Buy buttons on browse pages)
+//
+// objkt v6.2 fulfill_ask takes (ask_id, amount, proxy_for?, condition_extra?, referrers).
+// We always include our REFERRAL_WALLET in `referrers` to claim the listing's
+// referral bonus split — this is what `?ref=…` URL params do at the marketplace
+// level, but on-chain when we originate the fulfill ourselves.
+
+export interface BuyAsk {
+  marketplaceContract: string;
+  askId: number;
+  /** how many editions to buy from this ask */
+  amount: number;
+  /** price-per-edition in mutez — used to compute the value we send */
+  priceMutez: number;
+}
+
+const BUY_VIA_FULFILL_ASK: ReadonlySet<string> = new Set([
+  "KT1FvqJwEDWb1Gwc55Jd1jjTHRVWbYKUUpyq", // objkt v1
+  "KT1WvzYHCNBvDSdwafTHv7nJ1dWmZ8GCYuuC", // objkt v4
+  "KT1CePTyk6fk4cFr6fasY5YXPGks6ttjSLp4", // objkt v6
+  "KT1Xjap1TwmDR1d8yEd8ErkraAj2mbdMrPZY", // objkt v6.1
+  "KT1SwbTqhSKF6Pdokiu1K4Fpi17ahPPzmt1X", // objkt v6.2
+]);
+
+export function isBuyable(marketplaceContract: string): boolean {
+  return BUY_VIA_FULFILL_ASK.has(marketplaceContract);
+}
+
+export async function buildBuyBatch(
+  buyerAddress: string,
+  buys: BuyAsk[],
+): Promise<WalletParamsWithKind[]> {
+  if (buys.length === 0) return [];
+  const tezos = getTezos();
+  const ops: WalletParamsWithKind[] = [];
+  const { REFERRAL_WALLET } = await import("@/lib/constants");
+  for (const b of buys) {
+    if (!isBuyable(b.marketplaceContract)) {
+      throw new Error(
+        `Buy not supported for marketplace ${b.marketplaceContract} — use the marketplace's UI directly.`,
+      );
+    }
+    const mkt = await tezos.wallet.at(b.marketplaceContract);
+    const params = mkt.methodsObject
+      .fulfill_ask({
+        ask_id: b.askId,
+        amount: b.amount,
+        proxy_for: buyerAddress,
+        condition_extra: null,
+        referrers: { [REFERRAL_WALLET]: 10000 },
+      })
+      .toTransferParams({ amount: b.priceMutez * b.amount, mutez: true });
+    ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
+  }
+  return ops;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Batch listing creation (for /swap/batch and /swap/reswap)
 //
 // Targets objkt marketplace v6.2 — the current default `ask` entrypoint.

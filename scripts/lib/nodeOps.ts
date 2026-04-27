@@ -100,6 +100,55 @@ export interface AcceptableOffer {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Buy / fulfill_ask (mirror of operations.ts buildBuyBatch)
+
+export interface BuyAsk {
+  marketplaceContract: string;
+  askId: number;
+  amount: number;
+  priceMutez: number;
+}
+
+const BUY_VIA_FULFILL_ASK: ReadonlySet<string> = new Set([
+  "KT1FvqJwEDWb1Gwc55Jd1jjTHRVWbYKUUpyq",
+  "KT1WvzYHCNBvDSdwafTHv7nJ1dWmZ8GCYuuC",
+  "KT1CePTyk6fk4cFr6fasY5YXPGks6ttjSLp4",
+  "KT1Xjap1TwmDR1d8yEd8ErkraAj2mbdMrPZY",
+  "KT1SwbTqhSKF6Pdokiu1K4Fpi17ahPPzmt1X",
+]);
+
+export function isBuyable(marketplaceContract: string): boolean {
+  return BUY_VIA_FULFILL_ASK.has(marketplaceContract);
+}
+
+export async function buildBuyBatch(
+  tezos: TezosToolkit,
+  buyerAddress: string,
+  buys: BuyAsk[],
+  referralWallet: string,
+): Promise<ParamsWithKind[]> {
+  if (buys.length === 0) return [];
+  const ops: ParamsWithKind[] = [];
+  for (const b of buys) {
+    if (!isBuyable(b.marketplaceContract)) {
+      throw new Error(`Buy not supported for marketplace ${b.marketplaceContract}`);
+    }
+    const mkt = await tezos.contract.at(b.marketplaceContract);
+    const params = mkt.methodsObject
+      .fulfill_ask({
+        ask_id: b.askId,
+        amount: b.amount,
+        proxy_for: buyerAddress,
+        condition_extra: null,
+        referrers: { [referralWallet]: 10000 },
+      })
+      .toTransferParams({ amount: b.priceMutez * b.amount, mutez: true });
+    ops.push({ kind: "transaction" as const, ...params } as ParamsWithKind);
+  }
+  return ops;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Batch listing creation (mirror of operations.ts buildBatchListings).
 
 const OBJKT_V6_2_MARKETPLACE = "KT1SwbTqhSKF6Pdokiu1K4Fpi17ahPPzmt1X";

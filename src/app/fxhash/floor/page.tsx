@@ -3,6 +3,7 @@ import { PageShell } from "@/components/common/PageShell";
 import { WalletInputForm } from "@/components/common/WalletInputForm";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { BuyButton } from "@/components/common/BuyButton";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 import { formatTez, parseContractInput } from "@/lib/utils";
 
@@ -66,7 +67,7 @@ async function Floor({ fa }: { fa: string }) {
       <TokenGrid>
         {listings.map((l) => {
           const tok = l.token;
-          if (!tok) return null;
+          if (!tok || l.bigmap_key === null) return null;
           const creator = tok.creators?.[0]?.holder;
           return (
             <TokenCard
@@ -82,6 +83,15 @@ async function Floor({ fa }: { fa: string }) {
               }}
               priceMutez={l.price}
               marketplaceLabel={MARKETPLACE_NAMES[l.marketplace_contract] ?? "marketplace"}
+              footer={
+                <BuyButton
+                  marketplaceContract={l.marketplace_contract}
+                  askId={l.bigmap_key}
+                  priceMutez={l.price}
+                  amountAvailable={l.amount_left}
+                  tokenName={tok.name}
+                />
+              }
             />
           );
         })}

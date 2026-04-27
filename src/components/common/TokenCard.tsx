@@ -18,9 +18,11 @@ interface TokenCardProps {
   priceMutez?: number | null;
   badge?: ReactNode;
   marketplaceLabel?: string | null;
+  /** Optional footer slot — used to drop in a BuyButton or other action. */
+  footer?: ReactNode;
 }
 
-export function TokenCard({ token, priceMutez, badge, marketplaceLabel }: TokenCardProps) {
+export function TokenCard({ token, priceMutez, badge, marketplaceLabel, footer }: TokenCardProps) {
   const thumb = ipfsToHttp(token.thumbnailUri) ?? ipfsToHttp(token.displayUri ?? null);
   const title = token.name ?? `#${token.tokenId}`;
   return (
@@ -78,6 +80,7 @@ export function TokenCard({ token, priceMutez, badge, marketplaceLabel }: TokenC
             </span>
           ) : null}
         </div>
+        {footer && <div className="mt-2">{footer}</div>}
       </div>
     </article>
   );

@@ -1227,7 +1227,12 @@ export interface VariationToken {
   highest_offer: number | null;
   lowest_ask: number | null;
   holders: Array<{ holder_address: string; holder: { alias: string | null } | null; quantity: number }>;
-  listings_active: Array<{ price: number; marketplace_contract: string }>;
+  listings_active: Array<{
+    bigmap_key: number | null;
+    price: number;
+    amount_left: number;
+    marketplace_contract: string;
+  }>;
   listing_sales: Array<{ price_xtz: number | null; timestamp: string }>;
 }
 
@@ -1261,7 +1266,9 @@ const VARIATIONS_QUERY = /* GraphQL */ `
         order_by: { price: asc }
         limit: 1
       ) {
+        bigmap_key
         price
+        amount_left
         marketplace_contract
       }
       listing_sales(order_by: { timestamp: desc }, limit: 1) {
@@ -1305,6 +1312,7 @@ export async function getVariations(
 
 export interface FloorListing {
   id: string;
+  bigmap_key: number | null;
   price: number;
   amount: number;
   amount_left: number;
@@ -1328,6 +1336,7 @@ const FLOOR_QUERY = /* GraphQL */ `
       limit: $limit
     ) {
       id
+      bigmap_key
       price
       amount
       amount_left
