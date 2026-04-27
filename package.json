@@ -1,26 +1,51 @@
 {
-  "name": "tezos-tools",
+  "name": "tezos-nft-toolkit",
   "version": "0.1.0",
   "private": true,
+  "description": "Open-source suite of tools for Tezos NFT collectors and artists. Free, MIT-licensed, self-hostable.",
+  "license": "MIT",
+  "homepage": "https://github.com/maximus-ai-dev/tezos-nft-toolkit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maximus-ai-dev/tezos-nft-toolkit.git"
+  },
+  "keywords": [
+    "tezos",
+    "nft",
+    "objkt",
+    "fxhash",
+    "taquito",
+    "beacon",
+    "open-source"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:wallet": "tsx scripts/test-wallet.ts",
+    "test:scan": "tsx scripts/scan-wallet.ts",
+    "test:smoke": "bash scripts/smoke.sh"
   },
   "dependencies": {
+    "@airgap/beacon-sdk": "^4.8.1",
+    "@microsoft/signalr": "^10.0.0",
+    "@taquito/beacon-wallet": "^24.3.0",
+    "@taquito/taquito": "^24.3.0",
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@taquito/signer": "^24.3.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

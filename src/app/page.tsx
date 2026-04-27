@@ -1,65 +1,102 @@
-import Image from "next/image";
+import Link from "next/link";
+import { CATEGORY_LABELS, toolsByCategory, type ToolCategory } from "@/lib/tools";
+import { GITHUB_URL } from "@/lib/constants";
+
+const ORDER: ToolCategory[] = ["collector", "fxhash", "artist", "general", "advanced"];
 
 export default function Home() {
+  const groups = toolsByCategory();
+  const readyCount = Object.values(groups)
+    .flat()
+    .filter((t) => t.status === "ready").length;
+  const totalCount = Object.values(groups).flat().length;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+      <section className="mb-12">
+        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">Tezos NFT Toolkit</h1>
+        <p className="mt-3 text-zinc-600 dark:text-zinc-400 max-w-2xl">
+          An <strong className="text-zinc-900 dark:text-zinc-100">open-source</strong> suite of tools
+          for Tezos NFT collectors and artists. Free forever, MIT licensed, no logins, no rate limits,
+          no arbitrary bans.
+        </p>
+        <p className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+          <span>
+            {readyCount}/{totalCount} tools ready
+          </span>
+          <span aria-hidden>·</span>
           <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
+            className="hover:text-zinc-900 dark:hover:text-zinc-100 underline-offset-2 hover:underline"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+            Source on GitHub
           </a>
+          <span aria-hidden>·</span>
           <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            href={`https://vercel.com/new/clone?repository-url=${encodeURIComponent(GITHUB_URL)}`}
             target="_blank"
             rel="noopener noreferrer"
+            className="hover:text-zinc-900 dark:hover:text-zinc-100 underline-offset-2 hover:underline"
           >
-            Documentation
+            Self-host on Vercel
           </a>
-        </div>
-      </main>
+          <span aria-hidden>·</span>
+          <a
+            href="/history"
+            className="hover:text-zinc-900 dark:hover:text-zinc-100 underline-offset-2 hover:underline"
+          >
+            Try Token History →
+          </a>
+        </p>
+      </section>
+
+      {ORDER.map((cat) => (
+        <section key={cat} className="mb-12">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-4">
+            {CATEGORY_LABELS[cat]}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {groups[cat].map((tool) => {
+              const interactive = tool.status === "ready" || tool.status === "stub";
+              const cardClass =
+                tool.status === "ready"
+                  ? "border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                  : tool.status === "stub"
+                    ? "border-amber-200 dark:border-amber-900 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                    : "border-dashed border-zinc-200 dark:border-zinc-800 opacity-60";
+              const Wrapper = interactive ? Link : "div";
+              const wrapperProps = interactive ? { href: tool.href } : {};
+              return (
+                <Wrapper
+                  key={tool.slug}
+                  {...(wrapperProps as { href: string })}
+                  className={`block rounded-lg border p-4 transition-colors ${cardClass}`}
+                >
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h3 className="font-medium text-zinc-900 dark:text-zinc-100">{tool.name}</h3>
+                    {tool.status === "stub" && (
+                      <span className="text-[10px] uppercase tracking-wide text-amber-700 dark:text-amber-400 font-semibold">
+                        stub
+                      </span>
+                    )}
+                    {tool.status === "planned" && (
+                      <span className="text-[10px] uppercase tracking-wide text-zinc-400">soon</span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{tool.description}</p>
+                  {tool.status === "stub" && tool.stubReason && (
+                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                      {tool.stubReason}
+                    </p>
+                  )}
+                </Wrapper>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
