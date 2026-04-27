@@ -44,6 +44,20 @@ export default function Home() {
           </a>
           <span aria-hidden>·</span>
           <a
+            href="/why"
+            className="hover:text-zinc-900 dark:hover:text-zinc-100 underline-offset-2 hover:underline"
+          >
+            Why this exists
+          </a>
+          <span aria-hidden>·</span>
+          <a
+            href="/faq"
+            className="hover:text-zinc-900 dark:hover:text-zinc-100 underline-offset-2 hover:underline"
+          >
+            FAQ
+          </a>
+          <span aria-hidden>·</span>
+          <a
             href="/testers"
             className="text-amber-700 dark:text-amber-400 hover:underline underline-offset-2 font-medium"
           >

@@ -7,7 +7,10 @@ import { GITHUB_URL } from "@/lib/constants";
  */
 export function TestBanner() {
   return (
-    <div className="bg-amber-100 dark:bg-amber-950 border-b-2 border-amber-400 dark:border-amber-700 text-amber-950 dark:text-amber-100">
+    <div
+      data-chrome="banner"
+      className="bg-amber-100 dark:bg-amber-950 border-b-2 border-amber-400 dark:border-amber-700 text-amber-950 dark:text-amber-100"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm">
         <span className="font-semibold whitespace-nowrap">
           ⚠ Beta — use at your own risk

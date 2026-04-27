@@ -8,7 +8,10 @@ export function Navbar() {
   const groups = toolsByCategory();
 
   return (
-    <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-black/80 backdrop-blur sticky top-0 z-40">
+    <header
+      data-chrome="nav"
+      className="border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-black/80 backdrop-blur sticky top-0 z-40"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-6 h-14">
         <Link href="/" className="font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
           Tezos Toolkit

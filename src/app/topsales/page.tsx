@@ -10,6 +10,9 @@ const WINDOWS: Array<{ key: string; label: string; hours: number }> = [
   { key: "1h", label: "1 hour", hours: 1 },
   { key: "24h", label: "24 hours", hours: 24 },
   { key: "7d", label: "7 days", hours: 24 * 7 },
+  { key: "30d", label: "30 days", hours: 24 * 30 },
+  // Hall of fame: all-time top sales. We approximate "all time" with a 5-year window.
+  { key: "hof", label: "Hall of fame", hours: 24 * 365 * 5 },
 ];
 
 interface PageProps {
