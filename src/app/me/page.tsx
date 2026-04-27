@@ -232,13 +232,13 @@ function Dashboard({ data }: { data: DashboardData }) {
       <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
         {[
           ["/pnl", "P&L"],
+          ["/activity", "Heatmap"],
           ["/flex", "Flex"],
           ["/gallery", `?address=${data.address}`],
           ["/operators", "Operators"],
           ["/pin", "Pin"],
           ["/migrate/transfer", "Transfer"],
           ["/swap/batch", "Batch swap"],
-          ["/giveaway", "Giveaway"],
         ].map(([href, label]) => (
           <Link
             key={href}

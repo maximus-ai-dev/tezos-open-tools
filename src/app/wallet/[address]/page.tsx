@@ -5,10 +5,12 @@ import {
   getCreations,
   getSellerListings,
   getSalesBySeller,
+  getSalesByBuyer,
 } from "@/lib/objkt";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
 import { WatchButton } from "@/components/common/WatchButton";
+import { ActivityHeatmap } from "@/components/common/ActivityHeatmap";
 import { formatTez, isTezosAddress, shortAddress } from "@/lib/utils";
 import { objktProfileLink, MARKETPLACE_NAMES } from "@/lib/constants";
 
@@ -31,11 +33,12 @@ export default async function WalletProfilePage({ params }: PageProps) {
   const { address } = await params;
   if (!isTezosAddress(address)) notFound();
 
-  const [holdings, creations, listings, sales] = await Promise.all([
+  const [holdings, creations, listings, sales, buys] = await Promise.all([
     getHoldings(address, { limit: 60 }).catch(() => null),
     getCreations(address, { limit: 60 }).catch(() => []),
     getSellerListings(address, { limit: 200 }).catch(() => []),
-    getSalesBySeller(address, { limit: 100 }).catch(() => []),
+    getSalesBySeller(address, { limit: 5000 }).catch(() => []),
+    getSalesByBuyer(address, { limit: 5000 }).catch(() => []),
   ]);
 
   const heldCount = holdings?.held.length ?? 0;
@@ -90,6 +93,17 @@ export default async function WalletProfilePage({ params }: PageProps) {
           sub={`≈ ${formatTez(totalSoldValue)}`}
         />
       </div>
+
+      {(buys.length > 0 || sales.length > 0) && (
+        <Section
+          title="Activity (last 365 days)"
+          link={{ href: `/activity?address=${address}`, label: "Full view →" }}
+        >
+          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-4">
+            <ActivityHeatmap buys={buys} sells={sales} />
+          </div>
+        </Section>
+      )}
 
       {creations.length > 0 && (
         <Section
