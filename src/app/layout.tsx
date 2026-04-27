@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
+import { TestBanner } from "@/components/layout/TestBanner";
 import { WalletProvider } from "@/components/wallet/WalletProvider";
 import { GITHUB_URL } from "@/lib/constants";
 
@@ -33,6 +34,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col font-sans">
         <WalletProvider>
+          <TestBanner />
           <Navbar />
           <main className="flex-1">{children}</main>
           <footer className="border-t border-zinc-200 dark:border-zinc-800 py-4 text-center text-xs text-zinc-500">
