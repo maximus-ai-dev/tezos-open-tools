@@ -25,7 +25,7 @@ export function Navbar() {
               >
                 {CATEGORY_LABELS[cat]}
               </button>
-              <div className="absolute left-0 top-full pt-1 hidden group-hover:block min-w-64">
+              <div className="absolute left-0 top-full pt-1 hidden group-hover:block group-focus-within:block min-w-64">
                 <div className="rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg p-1 max-h-96 overflow-y-auto">
                   {groups[cat].map((tool) => (
                     <Link

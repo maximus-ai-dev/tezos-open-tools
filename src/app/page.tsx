@@ -1,11 +1,25 @@
 import Link from "next/link";
 import { CATEGORY_LABELS, toolsByCategory, type ToolCategory } from "@/lib/tools";
 import { GITHUB_URL } from "@/lib/constants";
+import { getRecentCommits } from "@/lib/github";
+
+function relativeTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(ms / 60_000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
 
 const ORDER: ToolCategory[] = ["collector", "fxhash", "artist", "general", "advanced"];
 
-export default function Home() {
+export default async function Home() {
   const groups = toolsByCategory();
+  const recentCommits = await getRecentCommits(5);
   const readyCount = Object.values(groups)
     .flat()
     .filter((t) => t.status === "ready").length;
@@ -65,6 +79,35 @@ export default function Home() {
           </a>
         </p>
       </section>
+
+      {recentCommits.length > 0 && (
+        <section className="mb-12">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">
+            Recently shipped
+          </h2>
+          <ul className="rounded-lg border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-200 dark:divide-zinc-800">
+            {recentCommits.map((c) => (
+              <li
+                key={c.sha}
+                className="px-3 py-2 flex items-center justify-between gap-3 text-sm"
+              >
+                <a
+                  href={c.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-zinc-900 dark:text-zinc-100 hover:underline min-w-0"
+                  title={c.subject}
+                >
+                  {c.subject}
+                </a>
+                <span className="text-xs text-zinc-500 shrink-0 font-mono">
+                  {relativeTime(c.date)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {ORDER.map((cat) => (
         <section key={cat} className="mb-12">

@@ -15,6 +15,7 @@ export interface ObjktTokenInfo {
   creators: Array<{ holder: { address: string; alias: string | null } }>;
   fa: { name: string | null; contract: string } | null;
   listings_active: Array<{
+    bigmap_key: number | null;
     price: number;
     amount: number;
     amount_left: number;
@@ -54,6 +55,7 @@ const TOKEN_INFO_QUERY = /* GraphQL */ `
         where: { status: { _eq: "active" } }
         order_by: { price: asc }
       ) {
+        bigmap_key
         price
         amount
         amount_left

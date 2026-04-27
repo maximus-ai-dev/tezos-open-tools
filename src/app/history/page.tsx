@@ -1,6 +1,7 @@
 import { getTokenInfo } from "@/lib/objkt";
 import { getTokenTransfers, getTransactionsByIds } from "@/lib/tzkt";
 import type { TzktTransfer, TzktTransaction } from "@/lib/tzkt";
+import { BuyButton } from "@/components/common/BuyButton";
 import {
   CONTRACTS,
   MARKETPLACE_NAMES,
@@ -193,15 +194,27 @@ function TokenHeader({
             </p>
           )}
           {lowestListing && (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
-              Floor:{" "}
-              <span className="text-zinc-900 dark:text-zinc-100 font-medium">
-                {formatTez(lowestListing.price)}
-              </span>{" "}
-              <span className="text-xs">
-                on {MARKETPLACE_NAMES[lowestListing.marketplace_contract] ?? "marketplace"}
-              </span>
-            </p>
+            <div className="mt-2 flex items-center gap-3 flex-wrap">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Floor:{" "}
+                <span className="text-zinc-900 dark:text-zinc-100 font-medium">
+                  {formatTez(lowestListing.price)}
+                </span>{" "}
+                <span className="text-xs">
+                  on {MARKETPLACE_NAMES[lowestListing.marketplace_contract] ?? "marketplace"}
+                </span>
+              </p>
+              {lowestListing.bigmap_key !== null && (
+                <BuyButton
+                  marketplaceContract={lowestListing.marketplace_contract}
+                  askId={lowestListing.bigmap_key}
+                  priceMutez={lowestListing.price}
+                  amountAvailable={lowestListing.amount_left}
+                  tokenName={name}
+                  variant="full"
+                />
+              )}
+            </div>
           )}
         </div>
       </div>
