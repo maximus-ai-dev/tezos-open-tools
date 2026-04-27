@@ -104,20 +104,26 @@ function Dashboard({ data }: { data: DashboardData }) {
 
   return (
     <>
-      <div className="mb-2 text-xs font-mono text-zinc-500">
+      <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
         <a
           href={objktProfileLink(data.address)}
           target="_blank"
           rel="noopener noreferrer"
-          className="hover:underline"
+          className="font-mono text-zinc-500 hover:underline"
         >
           {data.address}
         </a>
         {data.holdings?.alias && (
-          <span className="ml-2 text-zinc-700 dark:text-zinc-300">
+          <span className="font-mono text-zinc-700 dark:text-zinc-300">
             ({data.holdings.alias})
           </span>
         )}
+        <Link
+          href={`/wallet/${data.address}`}
+          className="text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          Share public profile →
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
