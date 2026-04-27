@@ -85,8 +85,8 @@ export function Navbar() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3">
-          <Link href="/history" className="hidden sm:inline-block text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
-            Token History
+          <Link href="/me" className="hidden sm:inline-block text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
+            Your wallet
           </Link>
           <ConnectButton />
         </div>
