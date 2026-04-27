@@ -69,9 +69,12 @@ check "mempool" "$BASE/mempool" "Gas Station"
 check "mempool drop empty" "$BASE/mempool/drop" "Drop Analysis"
 
 # Remaining stubs — should still explicitly say "not yet implemented"
-for slug in pin barter genart/batch; do
+for slug in barter genart/batch; do
   check "stub: $slug" "$BASE/$slug" "not yet implemented"
 done
+
+# /pin upgraded from stub → real (local + URL-shareable)
+check "pin ready" "$BASE/pin" "Pin Your Art"
 
 # Newly upgraded — should NOT be stubs anymore
 check "swap/batch ready" "$BASE/swap/batch" "Batch Swap"

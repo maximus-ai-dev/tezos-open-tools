@@ -53,7 +53,7 @@ export const TOOLS: Tool[] = [
   { slug: "gallery", href: "/gallery", name: "Gallery", description: "Gallery view of an artist's work.", category: "artist", status: "ready" },
   { slug: "fans", href: "/fans", name: "Fans / Collectors", description: "Top collectors of an artist's work.", category: "artist", status: "ready" },
   { slug: "giveaway", href: "/giveaway", name: "Giveaway / Airdrop", description: "Send a token to many wallets at once.", category: "artist", status: "ready" },
-  { slug: "pin", href: "/pin", name: "Pin Your Art", description: "Feature tokens on your objkt profile.", category: "artist", status: "stub", stubReason: "objkt profile pinning appears to be off-chain (server-side preference) rather than a contract action — would need objkt's profile API access." },
+  { slug: "pin", href: "/pin", name: "Pin Your Art", description: "Mark tokens as featured — local set, shareable via URL.", category: "artist", status: "ready" },
   { slug: "burned", href: "/burned", name: "Burns", description: "Your minted tokens that have been entirely burned.", category: "artist", status: "ready" },
   { slug: "swap-batch", href: "/swap/batch", name: "Batch Swap", description: "List many tokens for sale on objkt v6.2 in one signing.", category: "artist", status: "ready" },
   { slug: "swap-reswap", href: "/swap/reswap", name: "Batch Reswap / Unswap", description: "Cancel + re-list many tokens at once on objkt v6.2.", category: "artist", status: "ready" },

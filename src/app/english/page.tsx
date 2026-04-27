@@ -2,6 +2,7 @@ import { getActiveEnglishAuctions } from "@/lib/objkt";
 import { PageShell } from "@/components/common/PageShell";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { WatchButton } from "@/components/common/WatchButton";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,14 @@ export default async function EnglishAuctionsPage() {
                     : null
                 }
                 badge={`⏱ ${timeRemaining(a.end_time)}`}
+                footer={
+                  a.seller_address ? (
+                    <WatchButton
+                      address={a.seller_address}
+                      label={creator?.alias ?? undefined}
+                    />
+                  ) : null
+                }
               />
             );
           })}
