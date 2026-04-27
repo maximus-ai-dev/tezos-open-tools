@@ -44,7 +44,7 @@ Every link to objkt.com is built with this site's referral wallet, sharing the m
 
 ```bash
 git clone <your-fork-url>
-cd tezos-nft-toolkit
+cd tezos-open-tools
 npm install
 npm run dev
 ```
@@ -59,7 +59,7 @@ The fastest way to host your own copy:
 2. Sign in to [vercel.com](https://vercel.com) → "Add New Project" → import your fork.
 3. Click Deploy. Done. The default build command (`npm run build`) and output settings work out of the box.
 
-You'll get a public URL like `tezos-nft-toolkit-yourname.vercel.app`. Point your custom domain at it if you want.
+You'll get a public URL like `tezos-open-tools-yourname.vercel.app`. Point your custom domain at it if you want.
 
 There are no paid services to wire up — TzKT and objkt's GraphQL endpoints are both free public APIs.
 

@@ -2,7 +2,7 @@ export const REFERRAL_WALLET = "tz1cEVvuLSWGqLAQ5QTTLdKA56PyAYmiCDy7";
 
 // Project metadata — update these when you fork / rehost.
 export const PROJECT_NAME = "Tezos NFT Toolkit";
-export const GITHUB_URL = "https://github.com/maximus-ai-dev/tezos-nft-toolkit";
+export const GITHUB_URL = "https://github.com/maximus-ai-dev/tezos-open-tools";
 
 export const TZKT_API = "https://api.tzkt.io/v1";
 export const TZKT_WS = "wss://api.tzkt.io/v1/ws";
