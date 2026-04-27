@@ -86,6 +86,29 @@ export default function SweepPage() {
     });
   }
 
+  /** Bulk add or remove all keys for a group, respecting the includeMinted toggle. */
+  function bulkToggle(assets: SweepAsset[], checked: boolean) {
+    setSelected((s) => {
+      const next = new Set(s);
+      for (const a of assets) {
+        // Don't auto-select self-minted NFTs unless the user has opted in.
+        if (checked && a.self_minted && !includeMinted) continue;
+        const k = assetKey(a);
+        if (checked) next.add(k);
+        else next.delete(k);
+      }
+      return next;
+    });
+  }
+
+  function selectAll() {
+    if (!data) return;
+    bulkToggle([...data.fa12, ...data.fa2_fungibles, ...data.fa2_nfts], true);
+  }
+  function deselectAll() {
+    setSelected(new Set());
+  }
+
   const allAssets = useMemo<SweepAsset[]>(() => {
     if (!data) return [];
     return [...data.fa12, ...data.fa2_fungibles, ...data.fa2_nfts];
@@ -273,9 +296,27 @@ export default function SweepPage() {
           </section>
 
           <section className="mt-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-2">
-              Selected ({selectedAssets.length})
-            </h2>
+            <div className="flex items-baseline justify-between gap-2 mb-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
+                Selected ({selectedAssets.length})
+              </h2>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  className="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  onClick={deselectAll}
+                  className="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                >
+                  Deselect all
+                </button>
+              </div>
+            </div>
             <p className="text-xs text-zinc-500">
               {counts.nft} NFT{counts.nft === 1 ? "" : "s"}, {counts.fungible} fungible token
               {counts.fungible === 1 ? "" : "s"}
@@ -306,6 +347,7 @@ export default function SweepPage() {
               assets={data.fa12}
               selected={selected}
               toggle={toggle}
+              bulkToggle={bulkToggle}
             />
           )}
           {data.fa2_fungibles.length > 0 && (
@@ -314,6 +356,7 @@ export default function SweepPage() {
               assets={data.fa2_fungibles}
               selected={selected}
               toggle={toggle}
+              bulkToggle={bulkToggle}
             />
           )}
           {data.fa2_nfts.length > 0 && (
@@ -322,6 +365,7 @@ export default function SweepPage() {
               assets={data.fa2_nfts}
               selected={selected}
               toggle={toggle}
+              bulkToggle={bulkToggle}
               showMintedFlag
             />
           )}
@@ -411,17 +455,40 @@ function AssetGroup({
   assets,
   selected,
   toggle,
+  bulkToggle,
   showMintedFlag = false,
 }: {
   title: string;
   assets: SweepAsset[];
   selected: Set<string>;
   toggle: (a: SweepAsset) => void;
+  bulkToggle: (assets: SweepAsset[], checked: boolean) => void;
   showMintedFlag?: boolean;
 }) {
+  const selectedCount = assets.reduce(
+    (n, a) => (selected.has(assetKey(a)) ? n + 1 : n),
+    0,
+  );
+  const allChecked = selectedCount === assets.length && assets.length > 0;
+  const someChecked = selectedCount > 0 && selectedCount < assets.length;
   return (
     <section className="mt-6">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-2">{title}</h2>
+      <label className="flex items-center gap-2 cursor-pointer mb-2">
+        <input
+          type="checkbox"
+          checked={allChecked}
+          ref={(el) => {
+            if (el) el.indeterminate = someChecked;
+          }}
+          onChange={(e) => bulkToggle(assets, e.target.checked)}
+        />
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
+        {selectedCount > 0 && (
+          <span className="text-xs text-zinc-500">
+            — {selectedCount}/{assets.length} selected
+          </span>
+        )}
+      </label>
       <ul className="rounded-lg border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-200 dark:divide-zinc-800 max-h-96 overflow-y-auto">
         {assets.map((a) => (
           <AssetRow
