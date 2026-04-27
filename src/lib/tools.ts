@@ -61,7 +61,7 @@ export const TOOLS: Tool[] = [
   // ── GENERAL ──
   { slug: "event", href: "/event", name: "Events", description: "On-chain contract events viewer.", category: "general", status: "ready" },
   { slug: "discovery", href: "/discovery", name: "Linked Wallets", description: "Find wallets a target trades NFTs with most.", category: "general", status: "ready" },
-  { slug: "gifted", href: "/gifted", name: "Gifted Tokens", description: "Tokens received without payment.", category: "general", status: "planned" },
+  { slug: "gifted", href: "/gifted", name: "Gifted Tokens", description: "Heuristic detection of tokens received without payment.", category: "general", status: "ready" },
   { slug: "migrate-transfer", href: "/migrate/transfer", name: "Transfer Tokens", description: "Send NFTs to another wallet (batched FA2).", category: "general", status: "ready" },
   { slug: "misc-referral", href: "/misc/referral", name: "Referral Fees", description: "Referral earnings on objkt sales.", category: "general", status: "ready" },
   { slug: "topsales", href: "/topsales", name: "Top Sales", description: "Highest-priced sales over a time window.", category: "general", status: "ready" },

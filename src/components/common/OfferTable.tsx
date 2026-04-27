@@ -6,6 +6,7 @@ import {
   objktCollectionLink,
 } from "@/lib/constants";
 import { formatDate, formatTez, ipfsToHttp, shortAddress } from "@/lib/utils";
+import { WatchButton } from "@/components/common/WatchButton";
 
 interface OfferTableProps {
   offers: OfferActive[];
@@ -77,15 +78,21 @@ export function OfferTable({ offers, mode }: OfferTableProps) {
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">
                   {counterparty ? (
-                    <a
-                      href={objktProfileLink(counterparty)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:underline"
-                      title={counterparty}
-                    >
-                      {counterpartyAlias ?? shortAddress(counterparty)}
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={objktProfileLink(counterparty)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                        title={counterparty}
+                      >
+                        {counterpartyAlias ?? shortAddress(counterparty)}
+                      </a>
+                      <WatchButton
+                        address={counterparty}
+                        label={counterpartyAlias ?? undefined}
+                      />
+                    </div>
                   ) : (
                     <span className="text-zinc-400">—</span>
                   )}
