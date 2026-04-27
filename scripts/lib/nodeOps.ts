@@ -148,6 +148,38 @@ export async function buildBuyBatch(
   return ops;
 }
 
+// Bulk buy via objkt v6.2 fulfill_ask_bulk
+export interface BulkBuyAsk {
+  askId: number;
+  amount: number;
+  priceMutez: number;
+}
+
+export async function buildBulkBuy(
+  tezos: TezosToolkit,
+  buyerAddress: string,
+  asks: BulkBuyAsk[],
+  referralWallet: string,
+  atomic = false,
+): Promise<ParamsWithKind[]> {
+  if (asks.length === 0) return [];
+  const total = asks.reduce((s, a) => s + a.priceMutez * a.amount, 0);
+  const asksMap: Record<string, { amount: number; condition_extra: null }> = {};
+  for (const a of asks) {
+    asksMap[String(a.askId)] = { amount: a.amount, condition_extra: null };
+  }
+  const mkt = await tezos.contract.at("KT1SwbTqhSKF6Pdokiu1K4Fpi17ahPPzmt1X");
+  const params = mkt.methodsObject
+    .fulfill_ask_bulk({
+      asks: asksMap,
+      atomic,
+      proxy_for: buyerAddress,
+      referrers: { [referralWallet]: 10000 },
+    })
+    .toTransferParams({ amount: total, mutez: true });
+  return [{ kind: "transaction" as const, ...params } as ParamsWithKind];
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Batch listing creation (mirror of operations.ts buildBatchListings).
 

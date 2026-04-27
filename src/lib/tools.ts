@@ -40,6 +40,7 @@ export const TOOLS: Tool[] = [
   { slug: "fxhash-follow", href: "/fxhash/follow", name: "fxhash Secondary", description: "Sales of fxhash GENTKs across all marketplaces.", category: "fxhash", status: "ready" },
   { slug: "fxhash-offers", href: "/fxhash/offers", name: "fxhash Collection Offers", description: "Active offers on fxhash GENTK contracts.", category: "fxhash", status: "ready" },
   { slug: "fxhash-floor", href: "/fxhash/floor", name: "fxhash Floor Broom", description: "Cheapest active listings in a collection.", category: "fxhash", status: "ready" },
+  { slug: "sweep", href: "/sweep", name: "Floor Sweep", description: "Buy multiple cheap listings in one signed transaction (objkt v6.2).", category: "fxhash", status: "ready" },
   { slug: "fxhash-generative", href: "/fxhash/generative", name: "fxhash Project", description: "Project info + iterations grid.", category: "fxhash", status: "ready" },
   { slug: "fxhash-holders", href: "/fxhash/holders", name: "fxhash Holders", description: "Top holders of a collection.", category: "fxhash", status: "ready" },
   { slug: "fxhash-top", href: "/fxhash/top", name: "fxhash Project Stats", description: "Top fxhash projects by 24h volume.", category: "fxhash", status: "ready" },

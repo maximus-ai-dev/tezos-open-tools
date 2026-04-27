@@ -187,6 +187,51 @@ export function isBuyable(marketplaceContract: string): boolean {
   return BUY_VIA_FULFILL_ASK.has(marketplaceContract);
 }
 
+// Bulk buy on objkt v6.2 via fulfill_ask_bulk — N listings in one signed op.
+const OBJKT_V62_FOR_BULK = "KT1SwbTqhSKF6Pdokiu1K4Fpi17ahPPzmt1X";
+
+export interface BulkBuyAsk {
+  askId: number;
+  amount: number;
+  priceMutez: number;
+}
+
+export async function buildBulkBuy(
+  buyerAddress: string,
+  asks: BulkBuyAsk[],
+  /** atomic=true means all-or-nothing; false allows partial fills if listings get sniped mid-tx. */
+  atomic = false,
+): Promise<WalletParamsWithKind[]> {
+  if (asks.length === 0) return [];
+  if (asks.length === 1) {
+    return buildBuyBatch(buyerAddress, [
+      {
+        marketplaceContract: OBJKT_V62_FOR_BULK,
+        askId: asks[0].askId,
+        amount: asks[0].amount,
+        priceMutez: asks[0].priceMutez,
+      },
+    ]);
+  }
+  const tezos = getTezos();
+  const { REFERRAL_WALLET } = await import("@/lib/constants");
+  const total = asks.reduce((s, a) => s + a.priceMutez * a.amount, 0);
+  const asksMap: Record<string, { amount: number; condition_extra: null }> = {};
+  for (const a of asks) {
+    asksMap[String(a.askId)] = { amount: a.amount, condition_extra: null };
+  }
+  const mkt = await tezos.wallet.at(OBJKT_V62_FOR_BULK);
+  const params = mkt.methodsObject
+    .fulfill_ask_bulk({
+      asks: asksMap,
+      atomic,
+      proxy_for: buyerAddress,
+      referrers: { [REFERRAL_WALLET]: 10000 },
+    })
+    .toTransferParams({ amount: total, mutez: true });
+  return [{ kind: "transaction" as const, ...params } as WalletParamsWithKind];
+}
+
 export async function buildBuyBatch(
   buyerAddress: string,
   buys: BuyAsk[],
