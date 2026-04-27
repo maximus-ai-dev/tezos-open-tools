@@ -553,6 +553,66 @@ export async function getSalesInvolving(
   return data.listing_sale;
 }
 
+// All active listings on tokens created by a given artist, used by /compare
+// to break down marketplace presence.
+
+export interface ArtistListing {
+  id: string;
+  price: number;
+  amount_left: number;
+  marketplace_contract: string;
+  token: { token_id: string; fa_contract: string; name: string | null } | null;
+}
+
+// Two-step: first fetch the creator's token_pks, then fetch listings filtered
+// by token_pk._in. The single-step nested filter on `token.creators.creator_address`
+// is too expensive for objkt's hasura — it errors out on prolific creators.
+
+const CREATOR_TOKEN_PKS_QUERY = /* GraphQL */ `
+  query CreatorTokenPks($address: String!, $limit: Int!) {
+    token(
+      where: { creators: { creator_address: { _eq: $address } } }
+      limit: $limit
+    ) {
+      pk
+    }
+  }
+`;
+
+const LISTINGS_BY_TOKEN_PKS_QUERY = /* GraphQL */ `
+  query ListingsByTokenPks($pks: [bigint!]!, $limit: Int!) {
+    listing_active(
+      where: { token_pk: { _in: $pks } }
+      order_by: { price: asc }
+      limit: $limit
+    ) {
+      id
+      price
+      amount_left
+      marketplace_contract
+      token { token_id fa_contract name }
+    }
+  }
+`;
+
+export async function getArtistListings(
+  address: string,
+  opts: { limit?: number } = {},
+): Promise<ArtistListing[]> {
+  const { limit = 1000 } = opts;
+  const tokenData = await objktQuery<{ token: Array<{ pk: number }> }>(
+    CREATOR_TOKEN_PKS_QUERY,
+    { address, limit: 5000 },
+  );
+  const pks = tokenData.token.map((t) => t.pk);
+  if (pks.length === 0) return [];
+  const data = await objktQuery<{ listing_active: ArtistListing[] }>(
+    LISTINGS_BY_TOKEN_PKS_QUERY,
+    { pks, limit },
+  );
+  return data.listing_active;
+}
+
 // Active FA2 operator grants for a wallet (for /operators).
 // Each row: this wallet has authorized `operator_address` to move
 // (token.fa_contract, token.token_id) on its behalf.

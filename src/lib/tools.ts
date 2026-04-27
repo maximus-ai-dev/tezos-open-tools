@@ -68,6 +68,8 @@ export const TOOLS: Tool[] = [
   { slug: "topsales", href: "/topsales", name: "Top Sales", description: "Highest-priced sales over a time window.", category: "general", status: "ready" },
   { slug: "barter", href: "/barter", name: "Barter", description: "Trade tokens directly with another wallet.", category: "general", status: "stub", stubReason: "No canonical Tezos NFT barter contract — none of the major marketplaces (objkt, fxhash, Versum, HEN, Teia) expose a 2-party atomic swap. Would need to deploy our own escrow contract or pick a third-party one." },
   { slug: "operators", href: "/operators", name: "Operator Approvals", description: "View + revoke FA2 operator rights you've granted.", category: "general", status: "ready" },
+  { slug: "ops", href: "/ops", name: "Recent Operations", description: "Your last 30 signed transactions, statuses + tzkt links.", category: "general", status: "ready" },
+  { slug: "compare", href: "/compare", name: "Cross-marketplace Floor", description: "An artist's listings broken down by marketplace.", category: "general", status: "ready" },
   { slug: "settings", href: "/settings", name: "Settings", description: "Local preferences for this browser.", category: "general", status: "ready" },
 
   // ── ADVANCED ──

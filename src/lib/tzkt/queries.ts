@@ -41,6 +41,32 @@ export interface AccountTransfersOpts {
   limit?: number;
 }
 
+// Mixed-kind operations originated by an account. Used by /ops to show
+// the connected wallet's recent signed transactions (and reveals).
+export interface TzktAccountOp {
+  type: string; // "transaction" | "reveal" | "origination" | "delegation" | ...
+  id: number;
+  timestamp: string;
+  hash: string;
+  status?: "applied" | "failed" | "backtracked" | "skipped";
+  level: number;
+  amount?: number;
+  target?: { alias?: string | null; address: string } | null;
+  parameter?: { entrypoint: string; value: unknown } | null;
+}
+
+export function getAccountOps(
+  address: string,
+  opts: { limit?: number } = {},
+): Promise<TzktAccountOp[]> {
+  const { limit = 30 } = opts;
+  return tzktFetch<TzktAccountOp[]>(`/accounts/${address}/operations`, {
+    type: "transaction,reveal,origination,delegation",
+    "sort.desc": "id",
+    limit,
+  });
+}
+
 export interface TzktBlock {
   level: number;
   hash: string;
