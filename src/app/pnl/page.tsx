@@ -106,8 +106,13 @@ export default function PnlPage() {
           on-chain buy price for that token. Mints, free claims, and gifts show as <em>?</em>.
         </p>
         <p className="mt-2 text-xs text-zinc-500">
-          Floor is the cheapest active listing on that exact token (any marketplace). Unrealized only
-          — sales already made aren&apos;t counted.
+          Floor is the cheapest <strong>XTZ-denominated</strong> active listing on that exact token
+          (any marketplace). Sales paid in altcoins (DOGA, USDC, PEPE, …) are excluded — comparing
+          a token-priced buy to a tez floor is misleading.
+        </p>
+        <p className="mt-1 text-xs text-zinc-500">
+          Heads-up: some artists set sky-high &ldquo;make-offer&rdquo; BIN listings (e.g. 2,000,000 ꜩ).
+          Those inflate the floor sum but the math is correct — that&apos;s the actual on-chain ask.
         </p>
       </header>
 

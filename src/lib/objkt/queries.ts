@@ -135,7 +135,7 @@ const HOLDINGS_QUERY = /* GraphQL */ `
             }
           }
           listings_active: listings(
-            where: { status: { _eq: "active" } }
+            where: { status: { _eq: "active" }, currency_id: { _eq: "1" } }
             order_by: { price: asc }
             limit: 1
           ) {
@@ -1482,7 +1482,10 @@ export async function getFaFloor(
 const SALES_BY_BUYER_QUERY = /* GraphQL */ `
   query SalesByBuyer($address: String!, $limit: Int!) {
     listing_sale(
-      where: { buyer_address: { _eq: $address } }
+      where: {
+        buyer_address: { _eq: $address }
+        listing: { currency_id: { _eq: "1" } }
+      }
       order_by: { timestamp: desc }
       limit: $limit
     ) {
@@ -1527,7 +1530,10 @@ export async function getSalesByBuyer(
 const SALES_BY_SELLER_QUERY = /* GraphQL */ `
   query SalesBySeller($address: String!, $limit: Int!) {
     listing_sale(
-      where: { seller_address: { _eq: $address } }
+      where: {
+        seller_address: { _eq: $address }
+        listing: { currency_id: { _eq: "1" } }
+      }
       order_by: { timestamp: desc }
       limit: $limit
     ) {

@@ -72,10 +72,10 @@ export async function GET(request: Request) {
   // buys are sorted desc, so first wins.
   const lastBuy = new Map<string, { price: number; at: string }>();
   for (const s of buys) {
-    if (!s.token) continue;
+    if (!s.token || s.price_xtz === null) continue;
     const key = `${s.token.fa_contract}:${s.token.token_id}`;
     if (!lastBuy.has(key)) {
-      lastBuy.set(key, { price: s.price_xtz ?? s.price, at: s.timestamp });
+      lastBuy.set(key, { price: s.price_xtz, at: s.timestamp });
     }
   }
 
@@ -87,10 +87,10 @@ export async function GET(request: Request) {
     a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0,
   );
   for (const s of buysAsc) {
-    if (!s.token) continue;
+    if (!s.token || s.price_xtz === null) continue;
     const key = `${s.token.fa_contract}:${s.token.token_id}`;
     const arr = buysByToken.get(key) ?? [];
-    arr.push({ price: s.price_xtz ?? s.price, at: s.timestamp });
+    arr.push({ price: s.price_xtz, at: s.timestamp });
     buysByToken.set(key, arr);
   }
 
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
   );
   const realized: RealizedRow[] = [];
   for (const s of sellsAsc) {
-    if (!s.token) continue;
+    if (!s.token || s.price_xtz === null) continue;
     const key = `${s.token.fa_contract}:${s.token.token_id}`;
     const queue = buysByToken.get(key);
     let cost: { price: number; at: string } | undefined;
@@ -114,7 +114,7 @@ export async function GET(request: Request) {
         break;
       }
     }
-    const sold = s.price_xtz ?? s.price;
+    const sold = s.price_xtz;
     const r = cost ? sold - cost.price : null;
     realized.push({
       fa_contract: s.token.fa_contract,
