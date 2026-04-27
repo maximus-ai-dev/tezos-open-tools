@@ -72,6 +72,13 @@ export default async function Home() {
           </a>
           <span aria-hidden>·</span>
           <a
+            href="/donate"
+            className="hover:text-zinc-900 dark:hover:text-zinc-100 underline-offset-2 hover:underline"
+          >
+            Tip jar
+          </a>
+          <span aria-hidden>·</span>
+          <a
             href="/testers"
             className="text-amber-700 dark:text-amber-400 hover:underline underline-offset-2 font-medium"
           >

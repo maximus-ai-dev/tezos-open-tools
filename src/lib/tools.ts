@@ -76,6 +76,7 @@ export const TOOLS: Tool[] = [
   { slug: "ops", href: "/ops", name: "Recent Operations", description: "Your last 30 signed transactions, statuses + tzkt links.", category: "general", status: "ready" },
   { slug: "compare", href: "/compare", name: "Cross-marketplace Floor", description: "An artist's listings broken down by marketplace.", category: "general", status: "ready" },
   { slug: "settings", href: "/settings", name: "Settings", description: "Local preferences for this browser.", category: "general", status: "ready" },
+  { slug: "donate", href: "/donate", name: "Tip jar", description: "Send a small XTZ tip to the maintainer of this hosted instance.", category: "general", status: "ready" },
 
   // ── ADVANCED ──
   { slug: "mempool", href: "/mempool", name: "Gas Station", description: "Network status — head + recent blocks.", category: "advanced", status: "ready" },
