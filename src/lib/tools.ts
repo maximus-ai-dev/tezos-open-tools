@@ -26,6 +26,7 @@ export const TOOLS: Tool[] = [
   { slug: "pnl", href: "/pnl", name: "P&L", description: "Cost basis vs current floor for tokens you still hold.", category: "collector", status: "ready" },
   { slug: "wallet-profile", href: "/wallet", name: "Wallet Profile", description: "Public, shareable read-only profile for any Tezos wallet.", category: "general", status: "ready" },
   { slug: "activity", href: "/activity", name: "Activity Heatmap", description: "Daily buy + sell calendar for any wallet, last 365 days.", category: "general", status: "ready" },
+  { slug: "diff", href: "/diff", name: "Wallet Diff", description: "Compare two wallets — shared tokens, shared artists, what each holds alone.", category: "general", status: "ready" },
   { slug: "live", href: "/live", name: "Live Feed", description: "Real-time marketplace activity (4s polling).", category: "collector", status: "ready" },
   { slug: "follow", href: "/follow", name: "Follow Feed", description: "Live sales involving wallets you've saved.", category: "collector", status: "ready" },
   { slug: "feed", href: "/feed", name: "Latest Mints", description: "New mints across the network.", category: "collector", status: "ready" },
