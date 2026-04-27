@@ -35,16 +35,17 @@ export default function MePage() {
       fetch(`/api/holdings?address=${address}`, { cache: "no-store" }).then((r) => r.json()),
       fetch(`/api/listings?address=${address}`, { cache: "no-store" }).then((r) => r.json()),
       fetch(`/api/offers-received?address=${address}`, { cache: "no-store" }).then((r) => r.json()),
+      fetch(`/api/offers-made?address=${address}`, { cache: "no-store" }).then((r) => r.json()),
       fetch(`/api/my-ops?address=${address}&limit=10`, { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([h, l, o, ops]) => {
+      .then(([h, l, oIn, oOut, ops]) => {
         if (cancelled) return;
         setData({
           address,
           holdings: h.holdings,
           listings: l.listings,
-          incomingOffers: o.offers,
-          outgoingOffers: [], // separate endpoint; could add later
+          incomingOffers: oIn.offers,
+          outgoingOffers: oOut.offers,
           recentOps: ops.ops,
         });
       })
@@ -95,6 +96,12 @@ function Dashboard({ data }: { data: DashboardData }) {
     0,
   );
 
+  const outgoingCount = data.outgoingOffers.length;
+  const outgoingValue = data.outgoingOffers.reduce(
+    (s, o) => s + (o.price_xtz ?? o.price ?? 0),
+    0,
+  );
+
   return (
     <>
       <div className="mb-2 text-xs font-mono text-zinc-500">
@@ -113,10 +120,11 @@ function Dashboard({ data }: { data: DashboardData }) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         <Card label="Tokens held" primary={String(heldCount)} secondary={`floor sum ≈ ${formatTez(heldFloorSum)}`} href="/resale" />
         <Card label="Active listings" primary={String(listingsCount)} secondary={`asking ≈ ${formatTez(listingsValue)}`} href="/artist/sale" />
         <Card label="Offers received" primary={String(incomingCount)} secondary={`if all accepted ≈ ${formatTez(incomingValue)}`} href="/offers/received" />
+        <Card label="Offers made" primary={String(outgoingCount)} secondary={`outstanding ≈ ${formatTez(outgoingValue)}`} href="/offers/manage" />
         <Card label="Recent ops" primary={String(data.recentOps.length)} secondary="last 10" href="/ops" />
       </div>
 
@@ -157,6 +165,24 @@ function Dashboard({ data }: { data: DashboardData }) {
             ))}
             {data.incomingOffers.length > 5 && (
               <li className="text-xs text-zinc-400 italic px-2">+{data.incomingOffers.length - 5} more</li>
+            )}
+          </ul>
+        </Section>
+      )}
+
+      {data.outgoingOffers.length > 0 && (
+        <Section title="Offers you've made" href="/offers/manage" linkText="Manage all →">
+          <ul className="space-y-1 text-sm">
+            {data.outgoingOffers.slice(0, 5).map((o) => (
+              <li key={o.id} className="flex justify-between gap-2 px-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded">
+                <span className="truncate">{o.token?.name ?? `(collection ${o.fa?.name ?? "offer"})`}</span>
+                <span className="text-zinc-500 whitespace-nowrap">
+                  {formatTez(o.price_xtz ?? o.price)}
+                </span>
+              </li>
+            ))}
+            {data.outgoingOffers.length > 5 && (
+              <li className="text-xs text-zinc-400 italic px-2">+{data.outgoingOffers.length - 5} more</li>
             )}
           </ul>
         </Section>
