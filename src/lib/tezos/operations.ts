@@ -43,10 +43,15 @@ function isValidTokenId(id: unknown): boolean {
 }
 
 // Split a single contract's transfer call into chunks of N txs each. Tezos
-// caps gas at ~1.04M per operation, and a `transfer` entrypoint loops over
-// every tx — so a contract with 30+ NFTs in one call can hit gas_limit_too_high.
-// 15 keeps a comfortable margin for typical FA2 contracts.
-const TXS_PER_TRANSFER_CALL = 15;
+// caps gas at ~1.04M per operation; a `transfer` entrypoint loops over every
+// tx, so heavy contracts with many txs in one call hit gas_limit_too_high.
+// 8 keeps a comfortable margin even for expensive on-transfer hooks.
+const TXS_PER_TRANSFER_CALL = 8;
+
+// If a single op's gas estimate from the diagnostic exceeds this, we treat
+// the contract as too heavy to sweep — Taquito's safety margin during signing
+// would push declared gas_limit over the protocol cap (~1.04M).
+const MAX_PER_OP_GAS = 900_000;
 
 export async function buildFa2BatchTransfer(
   sender: string,
@@ -209,8 +214,13 @@ export async function diagnoseFa2Transfers(
           }
         }
       }
-      if (estGas !== null) survivingOps.push({ op, gas: estGas });
-      else failedContracts.push(fa);
+      if (estGas !== null && estGas <= MAX_PER_OP_GAS) {
+        survivingOps.push({ op, gas: estGas });
+      } else {
+        // Either simulation rejected (estGas null) or gas is too close to the
+        // protocol cap to sign safely. Flag the contract for the user.
+        if (!failedContracts.includes(fa)) failedContracts.push(fa);
+      }
       done++;
       onProgress?.(done, total);
     }
