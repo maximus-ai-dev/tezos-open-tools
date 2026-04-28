@@ -3,14 +3,26 @@ import { CATEGORY_LABELS, toolsByCategory, type ToolCategory } from "@/lib/tools
 import { GITHUB_URL } from "@/lib/constants";
 import { getRecentCommits } from "@/lib/github";
 
-// Temporary event banner. Auto-hides after `endsAt`.
-// To swap in a future event: edit fields, push, done. To remove early: set
-// endsAt to a past date or delete this constant + the banner block below.
-const EVENT_BANNER: { title: string; subtitle: string; href: string; endsAt: string } | null = {
-  title: "Proof of Palm 2026 is live 🌴",
-  subtitle: "Browse every token tagged #proofofpalm minted this year.",
-  href: "/tag/proofofpalm?preset=2026",
-  endsAt: "2026-07-01T00:00:00Z",
+// Temporary event banner. Auto-hides after `endsAt`. Pre-event copy uses
+// `upcomingTitle`; once `startsAt` is reached, swaps to `liveTitle`.
+// To swap in a future event: edit fields, push, done. To remove early:
+// set endsAt to a past date or delete this constant + the banner block below.
+const EVENT_BANNER: {
+  upcomingTitle: string;
+  liveTitle: string;
+  subtitle: string;
+  href: string;
+  startsAt: string;
+  endsAt: string;
+} | null = {
+  upcomingTitle: "Proof of Palm 2026 — May 23–31 🌴",
+  liveTitle: "Proof of Palm 2026 is live 🌴",
+  subtitle:
+    "Live feed of every token tagged #proofofpalm or #proofofpalm2026 during the event window.",
+  // Multi-tag URL: covers both spelling variants the community uses.
+  href: "/tag/proofofpalm,proofofpalm2026?preset=2026",
+  startsAt: "2026-05-23T00:00:00Z",
+  endsAt: "2026-06-01T00:00:00Z",
 };
 
 function relativeTime(iso: string): string {
@@ -38,7 +50,9 @@ export default async function Home() {
   // Server-side date check for the temporary event banner — `Date.now()` is
   // intentional here (server components render once per request).
   // eslint-disable-next-line react-hooks/purity
-  const showBanner = EVENT_BANNER !== null && Date.now() < new Date(EVENT_BANNER.endsAt).getTime();
+  const now = Date.now();
+  const showBanner = EVENT_BANNER !== null && now < new Date(EVENT_BANNER.endsAt).getTime();
+  const isLive = EVENT_BANNER !== null && now >= new Date(EVENT_BANNER.startsAt).getTime();
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
@@ -176,14 +190,14 @@ $$$$$$\\    $$$$$$\\   $$$$$$\\  $$ | $$$$$$$\\
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="min-w-0">
               <div className="font-semibold text-zinc-900 dark:text-zinc-100">
-                {EVENT_BANNER.title}
+                {isLive ? EVENT_BANNER.liveTitle : EVENT_BANNER.upcomingTitle}
               </div>
               <div className="mt-0.5 text-sm text-zinc-700 dark:text-zinc-300">
                 {EVENT_BANNER.subtitle}
               </div>
             </div>
             <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200 whitespace-nowrap">
-              Open feed →
+              {isLive ? "Open feed →" : "Preview feed →"}
             </span>
           </div>
         </Link>

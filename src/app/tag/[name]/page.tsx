@@ -30,30 +30,49 @@ function isoDaysAgo(n: number): string {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
 }
 
+/** Parse the [name] segment as a comma-separated list of tag names (OR). */
+function parseTagSegment(name: string): string[] {
+  return decodeURIComponent(name)
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
 export async function generateMetadata({ params }: PageProps) {
   const { name } = await params;
-  const tag = decodeURIComponent(name);
-  return { title: `#${tag} — Tezos tag feed`, description: `Tokens tagged ${tag} on Tezos.` };
+  const tags = parseTagSegment(name);
+  const label = tags.map((t) => `#${t}`).join(" ∪ ");
+  return {
+    title: `${label} — Tezos tag feed`,
+    description: `Tokens tagged ${tags.join(" or ")} on Tezos.`,
+  };
 }
 
 export default async function TagDetailPage({ params, searchParams }: PageProps) {
   const { name } = await params;
   const { preset, since, until } = await searchParams;
-  const tag = decodeURIComponent(name);
+  const tags = parseTagSegment(name);
+  const segment = tags.join(",");
   const active = PRESETS.find((p) => p.key === preset) ?? PRESETS[0]!;
   const effectiveSince = since ?? active.since;
   const effectiveUntil = until ?? active.until;
 
-  const tokens = await getTokensByTag(tag, {
+  const tokens = await getTokensByTag(tags, {
     since: effectiveSince,
     until: effectiveUntil,
     limit: 96,
   }).catch(() => []);
 
+  const headerLabel = tags.map((t) => `#${t}`).join(" or ");
+
   return (
     <PageShell
-      title={`#${tag}`}
-      description="Tokens tagged with this name. Anyone can use any tag — sort + share, but check creators if it matters."
+      title={headerLabel}
+      description={
+        tags.length > 1
+          ? "Tokens tagged with any of these names (OR). Anyone can use any tag — check creators if it matters."
+          : "Tokens tagged with this name. Anyone can use any tag — check creators if it matters."
+      }
     >
       <div className="mb-4 flex flex-wrap items-center gap-1 text-xs">
         <span className="text-zinc-500 mr-2">Window:</span>
@@ -62,7 +81,7 @@ export default async function TagDetailPage({ params, searchParams }: PageProps)
           return (
             <Link
               key={p.key}
-              href={`/tag/${encodeURIComponent(tag)}?preset=${p.key}`}
+              href={`/tag/${encodeURIComponent(segment)}?preset=${p.key}`}
               className={`px-2 py-1 rounded border ${
                 isActive
                   ? "border-zinc-900 dark:border-zinc-100 bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900"
@@ -87,7 +106,7 @@ export default async function TagDetailPage({ params, searchParams }: PageProps)
       </p>
 
       <LiveTagFeed
-        tag={tag}
+        tags={tags}
         initial={tokens}
         since={effectiveSince}
         until={effectiveUntil}

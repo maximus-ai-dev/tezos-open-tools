@@ -9,7 +9,8 @@ import { MARKETPLACE_NAMES } from "@/lib/constants";
 
 interface LiveTagFeedProps {
   initial: LatestMintToken[];
-  tag: string;
+  /** One or more tag names — tokens matching ANY are surfaced (OR). */
+  tags: string[];
   since?: string;
   until?: string;
   /** When false, the feed renders without polling. Useful for past-year presets
@@ -25,7 +26,7 @@ function tokenKey(t: LatestMintToken): string {
 
 export function LiveTagFeed({
   initial,
-  tag,
+  tags,
   since,
   until,
   livePollEnabled = true,
@@ -40,9 +41,10 @@ export function LiveTagFeed({
 
   const status: "live" | "paused" | "error" = paused ? "paused" : errored ? "error" : "live";
 
+  const tagParam = tags.join(",");
   const refresh = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ tag });
+      const params = new URLSearchParams({ tag: tagParam });
       if (since) params.set("since", since);
       if (until) params.set("until", until);
       const res = await fetch(`/api/tag-feed?${params}`, { cache: "no-store" });
@@ -63,7 +65,7 @@ export function LiveTagFeed({
     } catch {
       setErrored(true);
     }
-  }, [tag, since, until, maxKeep]);
+  }, [tagParam, since, until, maxKeep]);
 
   useEffect(() => {
     if (paused || !livePollEnabled) return;

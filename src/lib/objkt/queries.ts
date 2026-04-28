@@ -1534,10 +1534,10 @@ export async function getTopTags(opts: { limit?: number } = {}): Promise<TagRow[
 }
 
 const TOKENS_BY_TAG_QUERY = /* GraphQL */ `
-  query TokensByTag($tag: String!, $since: timestamptz, $until: timestamptz, $limit: Int!) {
+  query TokensByTag($tags: [String!]!, $since: timestamptz, $until: timestamptz, $limit: Int!) {
     token(
       where: {
-        tags: { tag: { name: { _eq: $tag } } }
+        tags: { tag: { name: { _in: $tags } } }
         timestamp: { _gte: $since, _lte: $until }
       }
       order_by: { timestamp: desc }
@@ -1574,13 +1574,16 @@ const TOKENS_BY_TAG_QUERY = /* GraphQL */ `
   }
 `;
 
+/** Pass one or more tag names — tokens matching ANY of them are returned (OR). */
 export async function getTokensByTag(
-  tag: string,
+  tag: string | string[],
   opts: { since?: string; until?: string; limit?: number } = {},
 ): Promise<LatestMintToken[]> {
   const { since, until, limit = 60 } = opts;
+  const tags = Array.isArray(tag) ? tag : [tag];
+  if (tags.length === 0) return [];
   const data = await objktQuery<{ token: LatestMintToken[] }>(TOKENS_BY_TAG_QUERY, {
-    tag,
+    tags,
     since: since ?? "1970-01-01T00:00:00Z",
     until: until ?? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     limit,
