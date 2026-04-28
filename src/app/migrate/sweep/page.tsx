@@ -34,6 +34,7 @@ export default function SweepPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [failedContracts, setFailedContracts] = useState<string[]>([]);
+  const [failedTokens, setFailedTokens] = useState<Array<{ fa: string; tokenId: string }>>([]);
 
   useEffect(() => {
     if (!address) return;
@@ -176,13 +177,27 @@ export default function SweepPage() {
 
       setStatus("done");
     } catch (err) {
+      // Always log the raw error so DevTools shows the full stack — the
+      // rendered message is intentionally short.
+      console.error("Sweep failed:", err);
       if (err instanceof BatchBuildError) {
         setFailedContracts(err.failedContracts);
-        setError(
-          `${err.failedContracts.length} contract${err.failedContracts.length === 1 ? "" : "s"} couldn't be loaded — likely malformed or scam tokens. Click "Uncheck broken contracts" below and retry.`,
-        );
+        setFailedTokens(err.failedTokens);
+        const parts: string[] = [];
+        if (err.failedContracts.length > 0) {
+          parts.push(
+            `${err.failedContracts.length} contract${err.failedContracts.length === 1 ? "" : "s"} failed to load`,
+          );
+        }
+        if (err.failedTokens.length > 0) {
+          parts.push(
+            `${err.failedTokens.length} token${err.failedTokens.length === 1 ? "" : "s"} had malformed IDs`,
+          );
+        }
+        setError(`${parts.join(" and ")}. Click "Uncheck broken" below and retry.`);
       } else {
         setFailedContracts([]);
+        setFailedTokens([]);
         setError(err instanceof Error ? err.message : String(err));
       }
       setStatus("error");
@@ -190,16 +205,20 @@ export default function SweepPage() {
   }
 
   function uncheckFailed() {
-    if (failedContracts.length === 0 || !data) return;
-    const failedSet = new Set(failedContracts);
+    if ((failedContracts.length === 0 && failedTokens.length === 0) || !data) return;
+    const failedFaSet = new Set(failedContracts);
+    const failedTokenKeys = new Set(failedTokens.map((t) => `${t.fa}:${t.tokenId}`));
     setSelected((s) => {
       const next = new Set(s);
       for (const a of [...data.fa12, ...data.fa2_fungibles, ...data.fa2_nfts]) {
-        if (failedSet.has(a.fa)) next.delete(assetKey(a));
+        if (failedFaSet.has(a.fa) || failedTokenKeys.has(`${a.fa}:${a.token_id}`)) {
+          next.delete(assetKey(a));
+        }
       }
       return next;
     });
     setFailedContracts([]);
+    setFailedTokens([]);
     setError(null);
     setStatus("ready");
   }
@@ -370,13 +389,21 @@ export default function SweepPage() {
             {status === "error" && error && (
               <div className="mb-3 rounded-md p-3 text-sm bg-red-50 dark:bg-red-950 text-red-900 dark:text-red-100 border border-red-200 dark:border-red-900">
                 <p className="break-words">{error}</p>
-                {failedContracts.length > 0 && (
+                {(failedContracts.length > 0 || failedTokens.length > 0) && (
                   <>
                     <details className="mt-2 text-xs">
-                      <summary className="cursor-pointer">Show {failedContracts.length} failing contract{failedContracts.length === 1 ? "" : "s"}</summary>
+                      <summary className="cursor-pointer">
+                        Show {failedContracts.length + failedTokens.length} broken item
+                        {failedContracts.length + failedTokens.length === 1 ? "" : "s"}
+                      </summary>
                       <ul className="mt-1 space-y-0.5 font-mono break-all">
                         {failedContracts.map((c) => (
-                          <li key={c}>{c}</li>
+                          <li key={`fa:${c}`}>{c} (whole contract)</li>
+                        ))}
+                        {failedTokens.map((t) => (
+                          <li key={`tok:${t.fa}:${t.tokenId}`}>
+                            {t.fa} #{t.tokenId}
+                          </li>
                         ))}
                       </ul>
                     </details>
@@ -385,9 +412,14 @@ export default function SweepPage() {
                       onClick={uncheckFailed}
                       className="mt-2 px-3 py-1.5 rounded-md bg-red-600 text-white text-xs font-medium hover:bg-red-700"
                     >
-                      Uncheck broken contracts and retry
+                      Uncheck broken and retry
                     </button>
                   </>
+                )}
+                {failedContracts.length === 0 && failedTokens.length === 0 && (
+                  <p className="mt-2 text-xs">
+                    Open DevTools → Console for the full stack trace.
+                  </p>
                 )}
               </div>
             )}

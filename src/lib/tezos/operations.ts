@@ -18,14 +18,28 @@ interface Fa2TransferTx {
 
 // Group transfers by FA contract and build per-contract `transfer` parameters
 // using Taquito's high-level methodsObject API.
-/** Thrown when one or more contracts couldn't be loaded — caller should let
- *  the user uncheck them and retry. `failedContracts` is the FA addresses. */
+/** Thrown when one or more contracts/tokens couldn't be prepared for transfer.
+ *  `failedContracts` are FA addresses where every selected token is unusable;
+ *  `failedTokens` are individual (fa, tokenId) pairs (used for malformed IDs). */
 export class BatchBuildError extends Error {
   failedContracts: string[];
-  constructor(failedContracts: string[]) {
-    super(`Couldn't load ${failedContracts.length} contract(s): ${failedContracts.join(", ")}`);
+  failedTokens: Array<{ fa: string; tokenId: string }>;
+  constructor(
+    failedContracts: string[],
+    failedTokens: Array<{ fa: string; tokenId: string }> = [],
+  ) {
+    const parts: string[] = [];
+    if (failedContracts.length > 0) parts.push(`${failedContracts.length} contract(s)`);
+    if (failedTokens.length > 0) parts.push(`${failedTokens.length} malformed token(s)`);
+    super(`Couldn't prepare ${parts.join(" and ")}`);
     this.failedContracts = failedContracts;
+    this.failedTokens = failedTokens;
   }
+}
+
+/** True if `id` is a string of digits representing a non-negative integer. */
+function isValidTokenId(id: unknown): boolean {
+  return typeof id === "string" && /^\d+$/.test(id);
 }
 
 export async function buildFa2BatchTransfer(
@@ -33,7 +47,15 @@ export async function buildFa2BatchTransfer(
   transfers: Fa2Transfer[],
 ): Promise<WalletParamsWithKind[]> {
   const byContract = new Map<string, Fa2TransferTx[]>();
+  const failedTokens: Array<{ fa: string; tokenId: string }> = [];
   for (const t of transfers) {
+    // Pre-validate inputs — malformed tokenIds slip through Taquito's
+    // methodsObject and explode at RPC simulation as a generic "[0] Type
+    // error" with no context. Catch them here instead.
+    if (!isValidTokenId(t.tokenId) || !Number.isFinite(t.amount) || t.amount < 1) {
+      failedTokens.push({ fa: t.fa, tokenId: String(t.tokenId) });
+      continue;
+    }
     const txs = byContract.get(t.fa) ?? [];
     txs.push({
       to_: t.to,
@@ -51,12 +73,12 @@ export async function buildFa2BatchTransfer(
   const tezos = getTezos();
   const entries = [...byContract.entries()];
   const settled = await Promise.allSettled(entries.map(([fa]) => tezos.wallet.at(fa)));
-  const failed: string[] = [];
+  const failedContracts: string[] = [];
   const ops: WalletParamsWithKind[] = [];
   settled.forEach((res, i) => {
     const [fa, txs] = entries[i]!;
     if (res.status === "rejected") {
-      failed.push(fa);
+      failedContracts.push(fa);
       return;
     }
     try {
@@ -65,10 +87,12 @@ export async function buildFa2BatchTransfer(
         .toTransferParams();
       ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
     } catch {
-      failed.push(fa);
+      failedContracts.push(fa);
     }
   });
-  if (failed.length > 0) throw new BatchBuildError(failed);
+  if (failedContracts.length > 0 || failedTokens.length > 0) {
+    throw new BatchBuildError(failedContracts, failedTokens);
+  }
   return ops;
 }
 
