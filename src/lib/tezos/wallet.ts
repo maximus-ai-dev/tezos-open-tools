@@ -21,7 +21,7 @@ export function getWallet(): BeaconWallet {
   }
   if (!wallet) {
     // Beacon defaults to mainnet when preferredNetwork isn't set.
-    wallet = new BeaconWallet({ name: "Tezos NFT Toolkit" });
+    wallet = new BeaconWallet({ name: "Tezos Open Tools" });
     getTezos().setWalletProvider(wallet);
   }
   return wallet;

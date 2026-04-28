@@ -2,7 +2,7 @@ import Link from "next/link";
 import { GITHUB_URL } from "@/lib/constants";
 
 export const metadata = {
-  title: "Why — Tezos NFT Toolkit",
+  title: "Why — Tezos Open Tools",
   description: "Why an open-source clone exists. Specifically, what we don't do.",
 };
 

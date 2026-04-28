@@ -2,7 +2,7 @@ import Link from "next/link";
 import { GITHUB_URL } from "@/lib/constants";
 
 export const metadata = {
-  title: "Testers — start here — Tezos NFT Toolkit",
+  title: "Testers — start here — Tezos Open Tools",
   description: "Onboarding for testers: how to try the beta safely and send useful feedback.",
 };
 

@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tezos NFT Toolkit",
+  title: "Tezos Open Tools",
   description:
     "Open-source suite of tools for Tezos NFT collectors and artists. Free forever, MIT licensed, self-hostable.",
 };

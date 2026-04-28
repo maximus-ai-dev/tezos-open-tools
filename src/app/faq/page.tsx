@@ -1,7 +1,7 @@
 import { GITHUB_URL, REFERRAL_WALLET } from "@/lib/constants";
 
 export const metadata = {
-  title: "FAQ — Tezos NFT Toolkit",
+  title: "FAQ — Tezos Open Tools",
   description: "Common questions about safety, open source, monetization.",
 };
 

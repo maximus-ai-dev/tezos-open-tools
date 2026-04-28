@@ -49,7 +49,7 @@ export function Navbar() {
           </div>
         </details>
         <Link href="/" className="font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-          Tezos Toolkit
+          Tezos Open Tools
         </Link>
         <nav className="hidden md:flex items-center gap-1 text-sm">
           {ORDER.map((cat) => (

@@ -26,7 +26,7 @@ check() {
 }
 
 # Pages — read-only
-check "homepage" "$BASE/" "Tezos NFT Toolkit"
+check "homepage" "$BASE/" "Tezos Open Tools"
 check "history empty" "$BASE/history" "Token History"
 check "history token" "$BASE/history?q=$TOKEN_Q" "hDAO"
 check "history referral" "$BASE/history?q=$TOKEN_Q" "ref=tz1cEVvuLSWGqLAQ5QTTLdKA56PyAYmiCDy7"
