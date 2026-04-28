@@ -8,11 +8,12 @@ import {
   BatchBuildError,
   buildFa12BatchTransfer,
   diagnoseFa2Transfers,
+  validatePackedBatches,
   sendBatch,
 } from "@/lib/tezos/operations";
+import type { OpWithGas } from "@/lib/tezos/operations";
 import { isTezosAddress, ipfsToHttp, shortAddress } from "@/lib/utils";
 import type { SweepAsset, SweepAssetsResult } from "@/app/api/sweep-assets/route";
-import type { WalletParamsWithKind } from "@taquito/taquito";
 
 type Status =
   | "idle"
@@ -191,22 +192,39 @@ export default function SweepPage() {
       // FA1.2 ops aren't diagnosed; budget a conservative 50k each.
       const FA12_GAS_GUESS = 50_000;
       const MAX_BATCH_GAS = 400_000;
-      const fa12WithGas = fa12Ops.map((op) => ({ op, gas: FA12_GAS_GUESS }));
+      const fa12WithGas: OpWithGas[] = fa12Ops.map((op) => ({
+        op,
+        gas: FA12_GAS_GUESS,
+        fa: "fa12",
+      }));
       const allOpsWithGas = [...fa2Result.ops, ...fa12WithGas];
 
-      const chunks: WalletParamsWithKind[][] = [];
-      let current: WalletParamsWithKind[] = [];
+      const packed: OpWithGas[][] = [];
+      let current: OpWithGas[] = [];
       let currentGas = 0;
-      for (const { op, gas } of allOpsWithGas) {
-        if (currentGas + gas > MAX_BATCH_GAS && current.length > 0) {
-          chunks.push(current);
+      for (const item of allOpsWithGas) {
+        if (currentGas + item.gas > MAX_BATCH_GAS && current.length > 0) {
+          packed.push(current);
           current = [];
           currentGas = 0;
         }
-        current.push(op);
-        currentGas += gas;
+        current.push(item);
+        currentGas += item.gas;
       }
-      if (current.length > 0) chunks.push(current);
+      if (current.length > 0) packed.push(current);
+
+      // Validate each packed batch as Temple/Beacon will see it. Batches that
+      // fail get recursively split until we find ops that genuinely fail — those
+      // contracts get flagged for the user to uncheck.
+      setStatus("checking");
+      setDiagProgress({ done: 0, total: packed.reduce((s, b) => s + b.length, 0) });
+      const validation = await validatePackedBatches(packed, (d, t) =>
+        setDiagProgress({ done: d, total: t }),
+      );
+      if (validation.failedContracts.length > 0) {
+        throw new BatchBuildError(validation.failedContracts, []);
+      }
+      const chunks = validation.valid;
       setStatus("signing");
       setProgress({ batch: 0, total: chunks.length, opHashes: [] });
 

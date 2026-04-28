@@ -132,6 +132,9 @@ export async function buildFa2BatchTransfer(
 export interface OpWithGas {
   op: WalletParamsWithKind;
   gas: number;
+  /** Source FA contract — used so failed batch validation can map back to a
+   *  user-meaningful identifier ("Uncheck broken contracts"). */
+  fa: string;
 }
 
 export async function diagnoseFa2Transfers(
@@ -217,7 +220,7 @@ export async function diagnoseFa2Transfers(
         }
       }
       if (estGas !== null && estGas <= MAX_PER_OP_GAS) {
-        survivingOps.push({ op, gas: estGas });
+        survivingOps.push({ op, gas: estGas, fa });
       } else {
         // Either simulation rejected (estGas null) or gas is too close to the
         // protocol cap to sign safely. Flag the contract for the user.
@@ -230,6 +233,49 @@ export async function diagnoseFa2Transfers(
   await Promise.all(Array.from({ length: 3 }, () => worker()));
 
   return { ops: survivingOps, failedContracts, failedTokens };
+}
+
+/** Estimate a packed batch against the RPC. If it fails, recursively halve
+ *  and try each half. Returns the batches that estimated cleanly plus the
+ *  set of FA addresses whose ops couldn't be sent at any size (single-op
+ *  batches that still fail). Single-op estimation already happened in the
+ *  diagnostic; this catches cross-op gas effects that show up only when ops
+ *  are packed together — the most common cause of "gas_limit_too_high" mid-
+ *  signing despite a clean diagnostic. */
+export async function validatePackedBatches(
+  packed: OpWithGas[][],
+  onProgress?: (done: number, total: number) => void,
+): Promise<{ valid: WalletParamsWithKind[][]; failedContracts: string[] }> {
+  const tezos = getTezos();
+  const failedContracts: string[] = [];
+  const valid: WalletParamsWithKind[][] = [];
+  let done = 0;
+  const total = packed.reduce((s, b) => s + b.length, 0);
+
+  async function check(batch: OpWithGas[]): Promise<void> {
+    if (batch.length === 0) return;
+    try {
+      await tezos.estimate.batch(batch.map((b) => b.op));
+      valid.push(batch.map((b) => b.op));
+      done += batch.length;
+      onProgress?.(done, total);
+    } catch {
+      if (batch.length === 1) {
+        const fa = batch[0]!.fa;
+        if (!failedContracts.includes(fa)) failedContracts.push(fa);
+        done += 1;
+        onProgress?.(done, total);
+        return;
+      }
+      const mid = Math.floor(batch.length / 2);
+      // Sequential, not parallel — keeps RPC pressure low.
+      await check(batch.slice(0, mid));
+      await check(batch.slice(mid));
+    }
+  }
+
+  for (const batch of packed) await check(batch);
+  return { valid, failedContracts };
 }
 
 export interface Fa12Transfer {
