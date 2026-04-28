@@ -14,7 +14,7 @@ import { isTezosAddress, ipfsToHttp, shortAddress } from "@/lib/utils";
 import type { SweepAsset, SweepAssetsResult } from "@/app/api/sweep-assets/route";
 import type { WalletParamsWithKind } from "@taquito/taquito";
 
-const CHUNK_SIZE = 50;
+const DEFAULT_CHUNK_SIZE = 20;
 
 type Status = "idle" | "loading" | "ready" | "building" | "signing" | "done" | "error";
 
@@ -35,6 +35,7 @@ export default function SweepPage() {
   const [error, setError] = useState<string | null>(null);
   const [failedContracts, setFailedContracts] = useState<string[]>([]);
   const [failedTokens, setFailedTokens] = useState<Array<{ fa: string; tokenId: string }>>([]);
+  const [chunkSize, setChunkSize] = useState<number>(DEFAULT_CHUNK_SIZE);
 
   useEffect(() => {
     if (!address) return;
@@ -160,10 +161,12 @@ export default function SweepPage() {
       ]);
       const allOps: WalletParamsWithKind[] = [...fa2Ops, ...fa12Ops];
 
-      // Chunk into multiple signed batches if too big.
+      // Chunk into multiple signed batches. Smaller chunks → more signing
+      // prompts but each batch's RPC estimation is more likely to succeed.
+      const safeChunkSize = Math.max(1, Math.min(50, chunkSize));
       const chunks: WalletParamsWithKind[][] = [];
-      for (let i = 0; i < allOps.length; i += CHUNK_SIZE) {
-        chunks.push(allOps.slice(i, i + CHUNK_SIZE));
+      for (let i = 0; i < allOps.length; i += safeChunkSize) {
+        chunks.push(allOps.slice(i, i + safeChunkSize));
       }
       setStatus("signing");
       setProgress({ batch: 0, total: chunks.length, opHashes: [] });
@@ -325,6 +328,29 @@ export default function SweepPage() {
                 Confirm address doesn&apos;t match.
               </p>
             )}
+          </section>
+
+          <section className="mt-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              Batch size
+            </h2>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={chunkSize}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  setChunkSize(Number.isFinite(n) ? Math.max(1, Math.min(50, n)) : DEFAULT_CHUNK_SIZE);
+                }}
+                className="w-20 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm font-mono"
+              />
+              <span className="text-xs text-zinc-500">
+                ops per signed batch (1–50). Lower if your wallet says &ldquo;Transaction could not
+                be estimated&rdquo; — bigger batches strain the RPC node.
+              </span>
+            </div>
           </section>
 
           <section className="mt-6">
@@ -496,10 +522,7 @@ export default function SweepPage() {
         }
       >
         <p className="text-xs text-zinc-500">
-          Will be split into{" "}
-          {Math.ceil((selectedAssets.length + 0.5) / CHUNK_SIZE)} signed batch
-          {Math.ceil((selectedAssets.length + 0.5) / CHUNK_SIZE) === 1 ? "" : "es"} of up to{" "}
-          {CHUNK_SIZE} ops each. Beacon will prompt once per batch.
+          Will be split into batches of up to {chunkSize} ops. Beacon will prompt once per batch.
         </p>
       </ConfirmDialog>
     </div>
