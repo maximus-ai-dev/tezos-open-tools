@@ -74,7 +74,7 @@ export async function buildFa2BatchTransfer(
   const entries = [...byContract.entries()];
   const settled = await Promise.allSettled(entries.map(([fa]) => tezos.wallet.at(fa)));
   const failedContracts: string[] = [];
-  const ops: WalletParamsWithKind[] = [];
+  const opsByFa: Array<{ fa: string; op: WalletParamsWithKind }> = [];
   settled.forEach((res, i) => {
     const [fa, txs] = entries[i]!;
     if (res.status === "rejected") {
@@ -85,11 +85,29 @@ export async function buildFa2BatchTransfer(
       const params = res.value.methodsObject
         .transfer([{ from_: sender, txs }])
         .toTransferParams();
-      ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
+      opsByFa.push({
+        fa,
+        op: { kind: "transaction" as const, ...params } as WalletParamsWithKind,
+      });
     } catch {
       failedContracts.push(fa);
     }
   });
+
+  // Pre-estimate each op individually. This catches contracts that pass param
+  // validation but fail at simulation — operator-required FA2, paused/locked
+  // contracts, soulbound tokens, etc. Without this step, those failures only
+  // surface as opaque "Transaction could not be estimated" 500s mid-signing.
+  const estResults = await Promise.allSettled(
+    opsByFa.map(({ op }) => tezos.estimate.batch([op])),
+  );
+  const ops: WalletParamsWithKind[] = [];
+  estResults.forEach((r, i) => {
+    const { fa, op } = opsByFa[i]!;
+    if (r.status === "rejected") failedContracts.push(fa);
+    else ops.push(op);
+  });
+
   if (failedContracts.length > 0 || failedTokens.length > 0) {
     throw new BatchBuildError(failedContracts, failedTokens);
   }
