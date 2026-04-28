@@ -29,7 +29,8 @@ const ORDER: ToolCategory[] = ["collector", "artist", "general", "fxhash", "adva
 
 export default async function Home() {
   const groups = toolsByCategory();
-  const recentCommits = await getRecentCommits(5);
+  const recentCommits = await getRecentCommits(1);
+  const lastShippedAt = recentCommits[0]?.date;
   const readyCount = Object.values(groups)
     .flat()
     .filter((t) => t.status === "ready").length;
@@ -91,6 +92,18 @@ export default async function Home() {
           >
             Tip jar
           </a>
+          {lastShippedAt && (
+            <>
+              <span aria-hidden>·</span>
+              <a
+                href="/changelog"
+                className="hover:text-zinc-900 dark:hover:text-zinc-100 underline-offset-2 hover:underline"
+                title={`Last commit: ${new Date(lastShippedAt).toLocaleString()}`}
+              >
+                Last updated {relativeTime(lastShippedAt)}
+              </a>
+            </>
+          )}
           <span aria-hidden>·</span>
           <a
             href="/testers"
@@ -120,35 +133,6 @@ export default async function Home() {
             </span>
           </div>
         </Link>
-      )}
-
-      {recentCommits.length > 0 && (
-        <section className="mb-12">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">
-            Recently shipped
-          </h2>
-          <ul className="rounded-lg border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-200 dark:divide-zinc-800">
-            {recentCommits.map((c) => (
-              <li
-                key={c.sha}
-                className="px-3 py-2 flex items-center justify-between gap-3 text-sm"
-              >
-                <a
-                  href={c.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="truncate text-zinc-900 dark:text-zinc-100 hover:underline min-w-0"
-                  title={c.subject}
-                >
-                  {c.subject}
-                </a>
-                <span className="text-xs text-zinc-500 shrink-0 font-mono">
-                  {relativeTime(c.date)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
       )}
 
       {ORDER.map((cat) => (
