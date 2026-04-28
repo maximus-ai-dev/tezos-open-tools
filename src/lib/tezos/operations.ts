@@ -104,12 +104,17 @@ export async function buildFa2BatchTransfer(
  *  Concurrency is intentionally low. Each op gets up to 3 attempts with
  *  exponential backoff so 5xx rate-limit responses don't get treated as real
  *  contract failures. */
+export interface OpWithGas {
+  op: WalletParamsWithKind;
+  gas: number;
+}
+
 export async function diagnoseFa2Transfers(
   sender: string,
   transfers: Fa2Transfer[],
   onProgress?: (done: number, total: number) => void,
 ): Promise<{
-  ops: WalletParamsWithKind[];
+  ops: OpWithGas[];
   failedContracts: string[];
   failedTokens: Array<{ fa: string; tokenId: string }>;
 }> {
@@ -156,17 +161,17 @@ export async function diagnoseFa2Transfers(
   const total = taggedOps.length;
   let cursor = 0;
   let done = 0;
-  const survivingOps: WalletParamsWithKind[] = [];
+  const survivingOps: OpWithGas[] = [];
   async function worker() {
     while (cursor < taggedOps.length) {
       const idx = cursor++;
       const { fa, op } = taggedOps[idx]!;
       let attempts = 0;
-      let ok = false;
-      while (attempts < 3 && !ok) {
+      let estGas: number | null = null;
+      while (attempts < 3 && estGas === null) {
         try {
-          await tezos.estimate.batch([op]);
-          ok = true;
+          const ests = await tezos.estimate.batch([op]);
+          estGas = ests.reduce((s, e) => s + e.gasLimit, 0);
         } catch {
           attempts++;
           if (attempts < 3) {
@@ -174,7 +179,7 @@ export async function diagnoseFa2Transfers(
           }
         }
       }
-      if (ok) survivingOps.push(op);
+      if (estGas !== null) survivingOps.push({ op, gas: estGas });
       else failedContracts.push(fa);
       done++;
       onProgress?.(done, total);

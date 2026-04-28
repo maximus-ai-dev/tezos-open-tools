@@ -14,8 +14,6 @@ import { isTezosAddress, ipfsToHttp, shortAddress } from "@/lib/utils";
 import type { SweepAsset, SweepAssetsResult } from "@/app/api/sweep-assets/route";
 import type { WalletParamsWithKind } from "@taquito/taquito";
 
-const DEFAULT_CHUNK_SIZE = 20;
-
 type Status =
   | "idle"
   | "loading"
@@ -43,7 +41,6 @@ export default function SweepPage() {
   const [error, setError] = useState<string | null>(null);
   const [failedContracts, setFailedContracts] = useState<string[]>([]);
   const [failedTokens, setFailedTokens] = useState<Array<{ fa: string; tokenId: string }>>([]);
-  const [chunkSize, setChunkSize] = useState<number>(DEFAULT_CHUNK_SIZE);
   const [diagProgress, setDiagProgress] = useState<{ done: number; total: number }>({
     done: 0,
     total: 0,
@@ -188,15 +185,28 @@ export default function SweepPage() {
         throw new BatchBuildError(fa2Result.failedContracts, fa2Result.failedTokens);
       }
 
-      const allOps: WalletParamsWithKind[] = [...fa2Result.ops, ...fa12Ops];
+      // Pack ops into batches by gas, not by count. Each Tezos block has a
+      // ~1.04M gas budget; we leave headroom and pack to ~700k per batch.
+      // FA1.2 ops don't have gas estimates from the diagnostic — assume an
+      // average that's safely above typical FA1.2 transfer cost.
+      const FA12_GAS_GUESS = 30_000;
+      const MAX_BATCH_GAS = 700_000;
+      const fa12WithGas = fa12Ops.map((op) => ({ op, gas: FA12_GAS_GUESS }));
+      const allOpsWithGas = [...fa2Result.ops, ...fa12WithGas];
 
-      // Chunk into multiple signed batches. Smaller chunks → more signing
-      // prompts but each batch's RPC estimation is more likely to succeed.
-      const safeChunkSize = Math.max(1, Math.min(50, chunkSize));
       const chunks: WalletParamsWithKind[][] = [];
-      for (let i = 0; i < allOps.length; i += safeChunkSize) {
-        chunks.push(allOps.slice(i, i + safeChunkSize));
+      let current: WalletParamsWithKind[] = [];
+      let currentGas = 0;
+      for (const { op, gas } of allOpsWithGas) {
+        if (currentGas + gas > MAX_BATCH_GAS && current.length > 0) {
+          chunks.push(current);
+          current = [];
+          currentGas = 0;
+        }
+        current.push(op);
+        currentGas += gas;
       }
+      if (current.length > 0) chunks.push(current);
       setStatus("signing");
       setProgress({ batch: 0, total: chunks.length, opHashes: [] });
 
@@ -359,28 +369,6 @@ export default function SweepPage() {
             )}
           </section>
 
-          <section className="mt-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-2">
-              Batch size
-            </h2>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={chunkSize}
-                onChange={(e) => {
-                  const n = parseInt(e.target.value, 10);
-                  setChunkSize(Number.isFinite(n) ? Math.max(1, Math.min(50, n)) : DEFAULT_CHUNK_SIZE);
-                }}
-                className="w-20 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm font-mono"
-              />
-              <span className="text-xs text-zinc-500">
-                ops per signed batch (1–50). Each click of &ldquo;Sweep&rdquo; first runs a
-                throttled simulation pass to filter out broken contracts before any wallet prompt.
-              </span>
-            </div>
-          </section>
 
           <section className="mt-6">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-2">
@@ -561,7 +549,9 @@ export default function SweepPage() {
         }
       >
         <p className="text-xs text-zinc-500">
-          Will be split into batches of up to {chunkSize} ops. Beacon will prompt once per batch.
+          Sweep will first run a throttled simulation pass to filter out broken contracts (no
+          wallet prompts), then split the rest into gas-fitted batches. Beacon prompts once per
+          batch.
         </p>
       </ConfirmDialog>
     </div>
