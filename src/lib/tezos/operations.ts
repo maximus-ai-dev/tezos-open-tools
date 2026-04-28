@@ -42,6 +42,12 @@ function isValidTokenId(id: unknown): boolean {
   return typeof id === "string" && /^\d+$/.test(id);
 }
 
+// Split a single contract's transfer call into chunks of N txs each. Tezos
+// caps gas at ~1.04M per operation, and a `transfer` entrypoint loops over
+// every tx — so a contract with 30+ NFTs in one call can hit gas_limit_too_high.
+// 15 keeps a comfortable margin for typical FA2 contracts.
+const TXS_PER_TRANSFER_CALL = 15;
+
 export async function buildFa2BatchTransfer(
   sender: string,
   transfers: Fa2Transfer[],
@@ -71,25 +77,37 @@ export async function buildFa2BatchTransfer(
   // construction can also throw synchronously on non-standard FA2 schemas, so
   // each per-contract step is wrapped in its own try/catch.
   const tezos = getTezos();
-  const entries = [...byContract.entries()];
-  const settled = await Promise.allSettled(entries.map(([fa]) => tezos.wallet.at(fa)));
+  const uniqueFas = [...byContract.keys()];
+  const settled = await Promise.allSettled(uniqueFas.map((fa) => tezos.wallet.at(fa)));
   const failedContracts: string[] = [];
-  const ops: WalletParamsWithKind[] = [];
+  const contractByFa = new Map<string, Awaited<ReturnType<typeof tezos.wallet.at>>>();
   settled.forEach((res, i) => {
-    const [fa, txs] = entries[i]!;
-    if (res.status === "rejected") {
-      failedContracts.push(fa);
-      return;
-    }
-    try {
-      const params = res.value.methodsObject
-        .transfer([{ from_: sender, txs }])
-        .toTransferParams();
-      ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
-    } catch {
-      failedContracts.push(fa);
-    }
+    const fa = uniqueFas[i]!;
+    if (res.status === "rejected") failedContracts.push(fa);
+    else contractByFa.set(fa, res.value);
   });
+
+  const ops: WalletParamsWithKind[] = [];
+  for (const [fa, txs] of byContract) {
+    const contract = contractByFa.get(fa);
+    if (!contract) continue;
+    // Split heavy contracts into multiple transfer calls so no single op
+    // declares a gas_limit above hard_gas_limit_per_operation (~1.04M).
+    let perContractFailed = false;
+    for (let i = 0; i < txs.length; i += TXS_PER_TRANSFER_CALL) {
+      const chunkTxs = txs.slice(i, i + TXS_PER_TRANSFER_CALL);
+      try {
+        const params = contract.methodsObject
+          .transfer([{ from_: sender, txs: chunkTxs }])
+          .toTransferParams();
+        ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
+      } catch {
+        perContractFailed = true;
+        break;
+      }
+    }
+    if (perContractFailed && !failedContracts.includes(fa)) failedContracts.push(fa);
+  }
   if (failedContracts.length > 0 || failedTokens.length > 0) {
     throw new BatchBuildError(failedContracts, failedTokens);
   }
@@ -132,28 +150,40 @@ export async function diagnoseFa2Transfers(
   }
 
   const tezos = getTezos();
-  const entries = [...byContract.entries()];
-  const settled = await Promise.allSettled(entries.map(([fa]) => tezos.wallet.at(fa)));
+  const uniqueFas = [...byContract.keys()];
+  const settled = await Promise.allSettled(uniqueFas.map((fa) => tezos.wallet.at(fa)));
   const failedContracts: string[] = [];
-  const taggedOps: Array<{ fa: string; op: WalletParamsWithKind }> = [];
+  const contractByFa = new Map<string, Awaited<ReturnType<typeof tezos.wallet.at>>>();
   settled.forEach((res, i) => {
-    const [fa, txs] = entries[i]!;
-    if (res.status === "rejected") {
-      failedContracts.push(fa);
-      return;
-    }
-    try {
-      const params = res.value.methodsObject
-        .transfer([{ from_: sender, txs }])
-        .toTransferParams();
-      taggedOps.push({
-        fa,
-        op: { kind: "transaction" as const, ...params } as WalletParamsWithKind,
-      });
-    } catch {
-      failedContracts.push(fa);
-    }
+    const fa = uniqueFas[i]!;
+    if (res.status === "rejected") failedContracts.push(fa);
+    else contractByFa.set(fa, res.value);
   });
+
+  // Split heavy contracts into per-15-tx transfer calls so each op stays
+  // under hard_gas_limit_per_operation. Each chunk gets its own simulation.
+  const taggedOps: Array<{ fa: string; op: WalletParamsWithKind }> = [];
+  for (const [fa, txs] of byContract) {
+    const contract = contractByFa.get(fa);
+    if (!contract) continue;
+    let buildFailed = false;
+    for (let i = 0; i < txs.length; i += TXS_PER_TRANSFER_CALL) {
+      const chunkTxs = txs.slice(i, i + TXS_PER_TRANSFER_CALL);
+      try {
+        const params = contract.methodsObject
+          .transfer([{ from_: sender, txs: chunkTxs }])
+          .toTransferParams();
+        taggedOps.push({
+          fa,
+          op: { kind: "transaction" as const, ...params } as WalletParamsWithKind,
+        });
+      } catch {
+        buildFailed = true;
+        break;
+      }
+    }
+    if (buildFailed && !failedContracts.includes(fa)) failedContracts.push(fa);
+  }
 
   // Second pass: throttled simulation. 3 concurrent workers, up to 3 attempts
   // per op with exponential backoff. Anything still failing after retries is
