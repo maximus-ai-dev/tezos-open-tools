@@ -45,7 +45,9 @@ export async function buildFa2BatchTransfer(
 
   // Fetch every contract abstraction in parallel — a sequential loop here is
   // the dominant cost when sweeping NFTs from 30+ collections. Use allSettled
-  // so a single malformed scam token doesn't abort the whole batch.
+  // so a single malformed scam token doesn't abort the whole batch. Param
+  // construction can also throw synchronously on non-standard FA2 schemas, so
+  // each per-contract step is wrapped in its own try/catch.
   const tezos = getTezos();
   const entries = [...byContract.entries()];
   const settled = await Promise.allSettled(entries.map(([fa]) => tezos.wallet.at(fa)));
@@ -57,10 +59,14 @@ export async function buildFa2BatchTransfer(
       failed.push(fa);
       return;
     }
-    const params = res.value.methodsObject
-      .transfer([{ from_: sender, txs }])
-      .toTransferParams();
-    ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
+    try {
+      const params = res.value.methodsObject
+        .transfer([{ from_: sender, txs }])
+        .toTransferParams();
+      ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
+    } catch {
+      failed.push(fa);
+    }
   });
   if (failed.length > 0) throw new BatchBuildError(failed);
   return ops;
@@ -92,14 +98,23 @@ export async function buildFa12BatchTransfer(
     if (res.status === "rejected") failed.push(uniqueFas[i]!);
     else contractByFa.set(uniqueFas[i]!, res.value);
   });
+  // Build params per transfer; non-standard FA1.2 schemas can throw here, in
+  // which case we mark the FA address as failed and surface it like any other.
+  const ops: WalletParamsWithKind[] = [];
+  for (const t of transfers) {
+    if (failed.includes(t.fa)) continue;
+    try {
+      const params = contractByFa
+        .get(t.fa)!
+        .methodsObject.transfer({ from: sender, to: t.to, value: t.amount })
+        .toTransferParams();
+      ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
+    } catch {
+      if (!failed.includes(t.fa)) failed.push(t.fa);
+    }
+  }
   if (failed.length > 0) throw new BatchBuildError(failed);
-  return transfers.map((t) => {
-    const params = contractByFa
-      .get(t.fa)!
-      .methodsObject.transfer({ from: sender, to: t.to, value: t.amount })
-      .toTransferParams();
-    return { kind: "transaction" as const, ...params } as WalletParamsWithKind;
-  });
+  return ops;
 }
 
 export interface SendResult {
