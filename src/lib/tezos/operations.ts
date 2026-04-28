@@ -18,6 +18,16 @@ interface Fa2TransferTx {
 
 // Group transfers by FA contract and build per-contract `transfer` parameters
 // using Taquito's high-level methodsObject API.
+/** Thrown when one or more contracts couldn't be loaded — caller should let
+ *  the user uncheck them and retry. `failedContracts` is the FA addresses. */
+export class BatchBuildError extends Error {
+  failedContracts: string[];
+  constructor(failedContracts: string[]) {
+    super(`Couldn't load ${failedContracts.length} contract(s): ${failedContracts.join(", ")}`);
+    this.failedContracts = failedContracts;
+  }
+}
+
 export async function buildFa2BatchTransfer(
   sender: string,
   transfers: Fa2Transfer[],
@@ -34,16 +44,26 @@ export async function buildFa2BatchTransfer(
   }
 
   // Fetch every contract abstraction in parallel — a sequential loop here is
-  // the dominant cost when sweeping NFTs from 30+ collections.
+  // the dominant cost when sweeping NFTs from 30+ collections. Use allSettled
+  // so a single malformed scam token doesn't abort the whole batch.
   const tezos = getTezos();
   const entries = [...byContract.entries()];
-  const contracts = await Promise.all(entries.map(([fa]) => tezos.wallet.at(fa)));
-  return entries.map(([, txs], i) => {
-    const params = contracts[i]!.methodsObject
+  const settled = await Promise.allSettled(entries.map(([fa]) => tezos.wallet.at(fa)));
+  const failed: string[] = [];
+  const ops: WalletParamsWithKind[] = [];
+  settled.forEach((res, i) => {
+    const [fa, txs] = entries[i]!;
+    if (res.status === "rejected") {
+      failed.push(fa);
+      return;
+    }
+    const params = res.value.methodsObject
       .transfer([{ from_: sender, txs }])
       .toTransferParams();
-    return { kind: "transaction" as const, ...params } as WalletParamsWithKind;
+    ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
   });
+  if (failed.length > 0) throw new BatchBuildError(failed);
+  return ops;
 }
 
 export interface Fa12Transfer {
@@ -63,11 +83,16 @@ export async function buildFa12BatchTransfer(
   const tezos = getTezos();
   // Dedupe contract fetches — same FA1.2 token may appear once per recipient.
   const uniqueFas = [...new Set(transfers.map((t) => t.fa))];
-  const contractByFa = new Map(
-    await Promise.all(
-      uniqueFas.map(async (fa) => [fa, await tezos.wallet.at(fa)] as const),
-    ),
+  const settled = await Promise.allSettled(
+    uniqueFas.map((fa) => tezos.wallet.at(fa)),
   );
+  const failed: string[] = [];
+  const contractByFa = new Map<string, Awaited<ReturnType<typeof tezos.wallet.at>>>();
+  settled.forEach((res, i) => {
+    if (res.status === "rejected") failed.push(uniqueFas[i]!);
+    else contractByFa.set(uniqueFas[i]!, res.value);
+  });
+  if (failed.length > 0) throw new BatchBuildError(failed);
   return transfers.map((t) => {
     const params = contractByFa
       .get(t.fa)!

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import {
+  BatchBuildError,
   buildFa2BatchTransfer,
   buildFa12BatchTransfer,
   sendBatch,
@@ -32,6 +33,7 @@ export default function SweepPage() {
     opHashes: [],
   });
   const [error, setError] = useState<string | null>(null);
+  const [failedContracts, setFailedContracts] = useState<string[]>([]);
 
   useEffect(() => {
     if (!address) return;
@@ -174,9 +176,32 @@ export default function SweepPage() {
 
       setStatus("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (err instanceof BatchBuildError) {
+        setFailedContracts(err.failedContracts);
+        setError(
+          `${err.failedContracts.length} contract${err.failedContracts.length === 1 ? "" : "s"} couldn't be loaded — likely malformed or scam tokens. Click "Uncheck broken contracts" below and retry.`,
+        );
+      } else {
+        setFailedContracts([]);
+        setError(err instanceof Error ? err.message : String(err));
+      }
       setStatus("error");
     }
+  }
+
+  function uncheckFailed() {
+    if (failedContracts.length === 0 || !data) return;
+    const failedSet = new Set(failedContracts);
+    setSelected((s) => {
+      const next = new Set(s);
+      for (const a of [...data.fa12, ...data.fa2_fungibles, ...data.fa2_nfts]) {
+        if (failedSet.has(a.fa)) next.delete(assetKey(a));
+      }
+      return next;
+    });
+    setFailedContracts([]);
+    setError(null);
+    setStatus("ready");
   }
 
   if (!address) {
@@ -214,9 +239,6 @@ export default function SweepPage() {
 
       {status === "loading" && (
         <p className="mt-6 text-sm text-zinc-500">Discovering your assets…</p>
-      )}
-      {status === "error" && error && (
-        <p className="mt-6 text-sm text-red-600 dark:text-red-400 break-words">{error}</p>
       )}
 
       {data && (
@@ -345,6 +367,30 @@ export default function SweepPage() {
           )}
 
           <div className="sticky bottom-0 mt-8 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-white/95 dark:bg-zinc-950/95 backdrop-blur border-t border-zinc-200 dark:border-zinc-800">
+            {status === "error" && error && (
+              <div className="mb-3 rounded-md p-3 text-sm bg-red-50 dark:bg-red-950 text-red-900 dark:text-red-100 border border-red-200 dark:border-red-900">
+                <p className="break-words">{error}</p>
+                {failedContracts.length > 0 && (
+                  <>
+                    <details className="mt-2 text-xs">
+                      <summary className="cursor-pointer">Show {failedContracts.length} failing contract{failedContracts.length === 1 ? "" : "s"}</summary>
+                      <ul className="mt-1 space-y-0.5 font-mono break-all">
+                        {failedContracts.map((c) => (
+                          <li key={c}>{c}</li>
+                        ))}
+                      </ul>
+                    </details>
+                    <button
+                      type="button"
+                      onClick={uncheckFailed}
+                      className="mt-2 px-3 py-1.5 rounded-md bg-red-600 text-white text-xs font-medium hover:bg-red-700"
+                    >
+                      Uncheck broken contracts and retry
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setConfirmOpen(true)}
