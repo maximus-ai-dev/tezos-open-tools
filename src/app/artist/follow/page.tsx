@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { BuyButton } from "@/components/common/BuyButton";
 import { getSavedAddresses, type SavedAddress } from "@/lib/savedAddresses";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 import type { LatestMintToken } from "@/lib/objkt";
@@ -78,6 +79,17 @@ export default function FollowingAnalysisPage() {
                   priceMutez={listing?.price ?? null}
                   marketplaceLabel={
                     listing ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace" : null
+                  }
+                  footer={
+                    listing?.bigmap_key !== null && listing?.bigmap_key !== undefined ? (
+                      <BuyButton
+                        marketplaceContract={listing.marketplace_contract}
+                        askId={listing.bigmap_key}
+                        priceMutez={listing.price}
+                        amountAvailable={listing.amount_left}
+                        tokenName={t.name}
+                      />
+                    ) : null
                   }
                 />
               );

@@ -3,6 +3,7 @@ import { getTokensByTag } from "@/lib/objkt";
 import { PageShell } from "@/components/common/PageShell";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { BuyButton } from "@/components/common/BuyButton";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -92,27 +93,39 @@ export default async function TagDetailPage({ params, searchParams }: PageProps)
         <p className="text-sm text-zinc-500">No tokens with this tag in the selected window.</p>
       ) : (
         <TokenGrid>
-          {tokens.map((t) => (
-            <TokenCard
-              key={`${t.fa_contract}:${t.token_id}`}
-              token={{
-                fa: t.fa_contract,
-                tokenId: t.token_id,
-                name: t.name,
-                thumbnailUri: t.thumbnail_uri,
-                displayUri: t.display_uri,
-                artistAddress: t.creators?.[0]?.holder.address ?? null,
-                artistAlias: t.creators?.[0]?.holder.alias ?? null,
-                supply: t.supply,
-              }}
-              priceMutez={t.listings_active[0]?.price ?? null}
-              marketplaceLabel={
-                t.listings_active[0]?.marketplace_contract
-                  ? MARKETPLACE_NAMES[t.listings_active[0].marketplace_contract] ?? null
-                  : null
-              }
-            />
-          ))}
+          {tokens.map((t) => {
+            const listing = t.listings_active[0];
+            return (
+              <TokenCard
+                key={`${t.fa_contract}:${t.token_id}`}
+                token={{
+                  fa: t.fa_contract,
+                  tokenId: t.token_id,
+                  name: t.name,
+                  thumbnailUri: t.thumbnail_uri,
+                  displayUri: t.display_uri,
+                  artistAddress: t.creators?.[0]?.holder.address ?? null,
+                  artistAlias: t.creators?.[0]?.holder.alias ?? null,
+                  supply: t.supply,
+                }}
+                priceMutez={listing?.price ?? null}
+                marketplaceLabel={
+                  listing ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? null : null
+                }
+                footer={
+                  listing?.bigmap_key !== null && listing?.bigmap_key !== undefined ? (
+                    <BuyButton
+                      marketplaceContract={listing.marketplace_contract}
+                      askId={listing.bigmap_key}
+                      priceMutez={listing.price}
+                      amountAvailable={listing.amount_left}
+                      tokenName={t.name}
+                    />
+                  ) : null
+                }
+              />
+            );
+          })}
         </TokenGrid>
       )}
     </PageShell>

@@ -182,7 +182,12 @@ export interface CreatedToken {
   supply: number | null;
   timestamp: string | null;
   fa: { name: string | null } | null;
-  listings_active: Array<{ price: number; marketplace_contract: string }>;
+  listings_active: Array<{
+    bigmap_key: number | null;
+    price: number;
+    amount_left: number;
+    marketplace_contract: string;
+  }>;
 }
 
 const CREATIONS_QUERY = /* GraphQL */ `
@@ -206,11 +211,13 @@ const CREATIONS_QUERY = /* GraphQL */ `
         name
       }
       listings_active: listings(
-        where: { status: { _eq: "active" } }
+        where: { status: { _eq: "active" }, currency_id: { _eq: "1" } }
         order_by: { price: asc }
         limit: 1
       ) {
+        bigmap_key
         price
+        amount_left
         marketplace_contract
       }
     }
@@ -687,11 +694,13 @@ const CREATIONS_BY_AUTHORS_QUERY = /* GraphQL */ `
         }
       }
       listings_active: listings(
-        where: { status: { _eq: "active" } }
+        where: { status: { _eq: "active" }, currency_id: { _eq: "1" } }
         order_by: { price: asc }
         limit: 1
       ) {
+        bigmap_key
         price
+        amount_left
         marketplace_contract
       }
     }
@@ -1207,11 +1216,13 @@ const LATEST_MINTS_QUERY = /* GraphQL */ `
         }
       }
       listings_active: listings(
-        where: { status: { _eq: "active" } }
+        where: { status: { _eq: "active" }, currency_id: { _eq: "1" } }
         order_by: { price: asc }
         limit: 1
       ) {
+        bigmap_key
         price
+        amount_left
         marketplace_contract
       }
     }
@@ -1294,11 +1305,13 @@ const FA_TOKENS_QUERY = /* GraphQL */ `
         }
       }
       listings_active: listings(
-        where: { status: { _eq: "active" } }
+        where: { status: { _eq: "active" }, currency_id: { _eq: "1" } }
         order_by: { price: asc }
         limit: 1
       ) {
+        bigmap_key
         price
+        amount_left
         marketplace_contract
       }
     }
@@ -1552,7 +1565,9 @@ const TOKENS_BY_TAG_QUERY = /* GraphQL */ `
         order_by: { price: asc }
         limit: 1
       ) {
+        bigmap_key
         price
+        amount_left
         marketplace_contract
       }
     }

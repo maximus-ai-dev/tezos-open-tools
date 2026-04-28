@@ -2,6 +2,7 @@ import { getLatestMints } from "@/lib/objkt";
 import { PageShell } from "@/components/common/PageShell";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { BuyButton } from "@/components/common/BuyButton";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,17 @@ export default async function FeedPage() {
                   listing ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace" : null
                 }
                 badge={t.supply !== null ? `ed ${t.supply}` : null}
+                footer={
+                  listing?.bigmap_key !== null && listing?.bigmap_key !== undefined ? (
+                    <BuyButton
+                      marketplaceContract={listing.marketplace_contract}
+                      askId={listing.bigmap_key}
+                      priceMutez={listing.price}
+                      amountAvailable={listing.amount_left}
+                      tokenName={t.name}
+                    />
+                  ) : null
+                }
               />
             );
           })}

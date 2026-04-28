@@ -9,6 +9,7 @@ import {
 } from "@/lib/objkt";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { BuyButton } from "@/components/common/BuyButton";
 import { WatchButton } from "@/components/common/WatchButton";
 import { ActivityHeatmap } from "@/components/common/ActivityHeatmap";
 import { formatTez, isTezosAddress, shortAddress } from "@/lib/utils";
@@ -111,25 +112,37 @@ export default async function WalletProfilePage({ params }: PageProps) {
           link={{ href: `/gallery?address=${address}`, label: "Full gallery →" }}
         >
           <TokenGrid>
-            {creations.slice(0, 12).map((t) => (
-              <TokenCard
-                key={`${t.fa_contract}:${t.token_id}`}
-                token={{
-                  fa: t.fa_contract,
-                  tokenId: t.token_id,
-                  name: t.name,
-                  thumbnailUri: t.thumbnail_uri,
-                  displayUri: t.display_uri,
-                  supply: t.supply,
-                }}
-                priceMutez={t.listings_active[0]?.price ?? null}
-                marketplaceLabel={
-                  t.listings_active[0]?.marketplace_contract
-                    ? MARKETPLACE_NAMES[t.listings_active[0].marketplace_contract]
-                    : null
-                }
-              />
-            ))}
+            {creations.slice(0, 12).map((t) => {
+              const listing = t.listings_active[0];
+              return (
+                <TokenCard
+                  key={`${t.fa_contract}:${t.token_id}`}
+                  token={{
+                    fa: t.fa_contract,
+                    tokenId: t.token_id,
+                    name: t.name,
+                    thumbnailUri: t.thumbnail_uri,
+                    displayUri: t.display_uri,
+                    supply: t.supply,
+                  }}
+                  priceMutez={listing?.price ?? null}
+                  marketplaceLabel={
+                    listing ? MARKETPLACE_NAMES[listing.marketplace_contract] : null
+                  }
+                  footer={
+                    listing?.bigmap_key !== null && listing?.bigmap_key !== undefined ? (
+                      <BuyButton
+                        marketplaceContract={listing.marketplace_contract}
+                        askId={listing.bigmap_key}
+                        priceMutez={listing.price}
+                        amountAvailable={listing.amount_left}
+                        tokenName={t.name}
+                      />
+                    ) : null
+                  }
+                />
+              );
+            })}
           </TokenGrid>
         </Section>
       )}
