@@ -456,7 +456,7 @@ export default function SweepPage() {
               className="w-full px-4 py-3 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               {status === "building"
-                ? "Preparing & simulating operations…"
+                ? "Preparing operations…"
                 : status === "signing"
                   ? progress.total === 0
                     ? "Awaiting wallet…"
