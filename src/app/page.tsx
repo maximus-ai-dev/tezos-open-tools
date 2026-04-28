@@ -3,6 +3,16 @@ import { CATEGORY_LABELS, toolsByCategory, type ToolCategory } from "@/lib/tools
 import { GITHUB_URL } from "@/lib/constants";
 import { getRecentCommits } from "@/lib/github";
 
+// Temporary event banner. Auto-hides after `endsAt`.
+// To swap in a future event: edit fields, push, done. To remove early: set
+// endsAt to a past date or delete this constant + the banner block below.
+const EVENT_BANNER: { title: string; subtitle: string; href: string; endsAt: string } | null = {
+  title: "Proof of Palm 2026 is live 🌴",
+  subtitle: "Browse every token tagged #proofofpalm minted this year.",
+  href: "/tag/proofofpalm?preset=2026",
+  endsAt: "2026-07-01T00:00:00Z",
+};
+
 function relativeTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const m = Math.floor(ms / 60_000);
@@ -86,6 +96,27 @@ export default async function Home() {
           </a>
         </p>
       </section>
+
+      {EVENT_BANNER && Date.now() < new Date(EVENT_BANNER.endsAt).getTime() && (
+        <Link
+          href={EVENT_BANNER.href}
+          className="block mb-12 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-gradient-to-br from-emerald-50 to-amber-50 dark:from-emerald-950 dark:to-amber-950 px-5 py-4 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors"
+        >
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <div className="font-semibold text-zinc-900 dark:text-zinc-100">
+                {EVENT_BANNER.title}
+              </div>
+              <div className="mt-0.5 text-sm text-zinc-700 dark:text-zinc-300">
+                {EVENT_BANNER.subtitle}
+              </div>
+            </div>
+            <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200 whitespace-nowrap">
+              Open feed →
+            </span>
+          </div>
+        </Link>
+      )}
 
       {recentCommits.length > 0 && (
         <section className="mb-12">
