@@ -327,10 +327,17 @@ export interface SendResult {
   opHash: string;
 }
 
-export async function sendBatch(ops: WalletParamsWithKind[]): Promise<SendResult> {
+export async function sendBatch(
+  ops: WalletParamsWithKind[],
+  opts: { waitConfirmation?: boolean } = {},
+): Promise<SendResult> {
   if (ops.length === 0) throw new Error("No operations to send");
   const tezos = getTezos();
   const op = await tezos.wallet.batch(ops).send();
+  // For multi-batch flows (e.g. /migrate/sweep), wait for inclusion before
+  // returning so the wallet picks up the new counter. Otherwise the next
+  // batch can collide with this one in the mempool.
+  if (opts.waitConfirmation) await op.confirmation(1);
   return { opHash: op.opHash };
 }
 

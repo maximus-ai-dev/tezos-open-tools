@@ -230,7 +230,12 @@ export default function SweepPage() {
 
       const opHashes: string[] = [];
       for (let i = 0; i < chunks.length; i++) {
-        const { opHash } = await sendBatch(chunks[i]!);
+        // Wait for inclusion on every batch except the last — otherwise the
+        // wallet's next batch will reuse the same counter and collide in
+        // mempool ("conflicting operation"). Last batch: skip the wait so the
+        // user gets back to "done" as fast as possible.
+        const isLast = i === chunks.length - 1;
+        const { opHash } = await sendBatch(chunks[i]!, { waitConfirmation: !isLast });
         opHashes.push(opHash);
         setProgress({ batch: i + 1, total: chunks.length, opHashes: [...opHashes] });
       }
