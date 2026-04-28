@@ -6,7 +6,6 @@ import { useWallet } from "@/components/wallet/WalletProvider";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import {
   BatchBuildError,
-  buildFa2BatchTransfer,
   buildFa12BatchTransfer,
   diagnoseFa2Transfers,
   sendBatch,
@@ -150,8 +149,9 @@ export default function SweepPage() {
   async function sweep() {
     setConfirmOpen(false);
     if (!ready || !address) return;
-    setStatus("building");
     setError(null);
+    setFailedContracts([]);
+    setFailedTokens([]);
     setProgress({ batch: 0, total: 0, opHashes: [] });
     try {
       // Build all per-asset operations.
@@ -167,12 +167,28 @@ export default function SweepPage() {
         .filter((a) => a.standard === "fa1.2")
         .map((a) => ({ fa: a.fa, to: destination, amount: a.balance }));
 
-      // Build FA2 + FA1.2 in parallel (each parallelizes its own contract fetches).
-      const [fa2Ops, fa12Ops] = await Promise.all([
-        fa2Transfers.length > 0 ? buildFa2BatchTransfer(address, fa2Transfers) : Promise.resolve([]),
-        fa12Transfers.length > 0 ? buildFa12BatchTransfer(address, fa12Transfers) : Promise.resolve([]),
+      // FA2: pre-simulate every per-contract op (throttled, with retries) to
+      // catch contracts that would fail at signing time. FA1.2 contracts are
+      // standardized enough to skip this — and would just slow us down.
+      setStatus("diagnosing");
+      setDiagProgress({ done: 0, total: 0 });
+      const [fa2Result, fa12Ops] = await Promise.all([
+        fa2Transfers.length > 0
+          ? diagnoseFa2Transfers(address, fa2Transfers, (done, total) =>
+              setDiagProgress({ done, total }),
+            )
+          : Promise.resolve({ ops: [], failedContracts: [], failedTokens: [] }),
+        fa12Transfers.length > 0
+          ? buildFa12BatchTransfer(address, fa12Transfers)
+          : Promise.resolve([]),
       ]);
-      const allOps: WalletParamsWithKind[] = [...fa2Ops, ...fa12Ops];
+
+      if (fa2Result.failedContracts.length > 0 || fa2Result.failedTokens.length > 0) {
+        // Surface the failures and let the user uncheck + retry.
+        throw new BatchBuildError(fa2Result.failedContracts, fa2Result.failedTokens);
+      }
+
+      const allOps: WalletParamsWithKind[] = [...fa2Result.ops, ...fa12Ops];
 
       // Chunk into multiple signed batches. Smaller chunks → more signing
       // prompts but each batch's RPC estimation is more likely to succeed.
@@ -216,47 +232,6 @@ export default function SweepPage() {
         setFailedTokens([]);
         setError(err instanceof Error ? err.message : String(err));
       }
-      setStatus("error");
-    }
-  }
-
-  async function runDiagnostic() {
-    if (!address || !data) return;
-    setStatus("diagnosing");
-    setError(null);
-    setDiagProgress({ done: 0, total: 0 });
-    try {
-      const fa2Transfers = selectedAssets
-        .filter((a) => a.standard === "fa2")
-        .map((a) => ({
-          fa: a.fa,
-          tokenId: a.token_id,
-          to: destination || address,
-          amount: balanceAsNumber(a.balance),
-        }));
-      const result = await diagnoseFa2Transfers(address, fa2Transfers, (done, total) =>
-        setDiagProgress({ done, total }),
-      );
-      setFailedContracts(result.failedContracts);
-      setFailedTokens(result.failedTokens);
-      if (result.failedContracts.length === 0 && result.failedTokens.length === 0) {
-        setError(
-          "Diagnostic found no failures. Your selection should sign cleanly — try the Sweep button again.",
-        );
-      } else {
-        const parts: string[] = [];
-        if (result.failedContracts.length > 0) {
-          parts.push(`${result.failedContracts.length} contract${result.failedContracts.length === 1 ? "" : "s"}`);
-        }
-        if (result.failedTokens.length > 0) {
-          parts.push(`${result.failedTokens.length} token${result.failedTokens.length === 1 ? "" : "s"}`);
-        }
-        setError(`Diagnostic found ${parts.join(" and ")} that fail simulation. Click "Uncheck broken" below.`);
-      }
-      setStatus("error");
-    } catch (err) {
-      console.error("Diagnostic failed:", err);
-      setError(err instanceof Error ? err.message : String(err));
       setStatus("error");
     }
   }
@@ -401,8 +376,8 @@ export default function SweepPage() {
                 className="w-20 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm font-mono"
               />
               <span className="text-xs text-zinc-500">
-                ops per signed batch (1–50). Lower if your wallet says &ldquo;Transaction could not
-                be estimated&rdquo; — bigger batches strain the RPC node.
+                ops per signed batch (1–50). Each click of &ldquo;Sweep&rdquo; first runs a
+                throttled simulation pass to filter out broken contracts before any wallet prompt.
               </span>
             </div>
           </section>
@@ -497,19 +472,9 @@ export default function SweepPage() {
                   </>
                 )}
                 {failedContracts.length === 0 && failedTokens.length === 0 && (
-                  <>
-                    <p className="mt-2 text-xs">
-                      Run the diagnostic below to find which contract is failing simulation.
-                      Open DevTools → Console for the full stack trace.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => void runDiagnostic()}
-                      className="mt-2 px-3 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 text-xs font-medium hover:opacity-90"
-                    >
-                      Run diagnostic (no signing — throttled simulation)
-                    </button>
-                  </>
+                  <p className="mt-2 text-xs">
+                    Open DevTools → Console for the full stack trace.
+                  </p>
                 )}
               </div>
             )}

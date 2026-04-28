@@ -109,6 +109,7 @@ export async function diagnoseFa2Transfers(
   transfers: Fa2Transfer[],
   onProgress?: (done: number, total: number) => void,
 ): Promise<{
+  ops: WalletParamsWithKind[];
   failedContracts: string[];
   failedTokens: Array<{ fa: string; tokenId: string }>;
 }> {
@@ -155,6 +156,7 @@ export async function diagnoseFa2Transfers(
   const total = taggedOps.length;
   let cursor = 0;
   let done = 0;
+  const survivingOps: WalletParamsWithKind[] = [];
   async function worker() {
     while (cursor < taggedOps.length) {
       const idx = cursor++;
@@ -172,14 +174,15 @@ export async function diagnoseFa2Transfers(
           }
         }
       }
-      if (!ok) failedContracts.push(fa);
+      if (ok) survivingOps.push(op);
+      else failedContracts.push(fa);
       done++;
       onProgress?.(done, total);
     }
   }
   await Promise.all(Array.from({ length: 3 }, () => worker()));
 
-  return { failedContracts, failedTokens };
+  return { ops: survivingOps, failedContracts, failedTokens };
 }
 
 export interface Fa12Transfer {
