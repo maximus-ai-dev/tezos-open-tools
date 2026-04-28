@@ -30,6 +30,7 @@ export const TOOLS: Tool[] = [
   { slug: "live", href: "/live", name: "Live Feed", description: "Real-time marketplace activity (4s polling).", category: "collector", status: "ready" },
   { slug: "follow", href: "/follow", name: "Follow Feed", description: "Live sales involving wallets you've saved.", category: "collector", status: "ready" },
   { slug: "feed", href: "/feed", name: "Latest Mints", description: "New mints across the network.", category: "collector", status: "ready" },
+  { slug: "tag", href: "/tag", name: "Tag Search", description: "Browse community-event tags (Proof of Palm, OBJKT4OBJKT, …) with year filters.", category: "collector", status: "ready" },
   { slug: "resale", href: "/resale", name: "Your Collection", description: "Your collection with current floor and resale data.", category: "collector", status: "ready" },
   { slug: "english", href: "/english", name: "English Auctions", description: "Browse active English auctions.", category: "collector", status: "ready" },
   { slug: "flex", href: "/flex", name: "Flex", description: "Show off a wallet's collection in a clean grid.", category: "collector", status: "ready" },

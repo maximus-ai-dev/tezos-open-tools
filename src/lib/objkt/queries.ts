@@ -1477,6 +1477,102 @@ export async function getFaFloor(
   return data.listing_active;
 }
 
+// Tags — substring search + token feed for community-event tags
+// (e.g. "proofofpalm", "burnyboys"). Free-form metadata, anyone can use any.
+
+export interface TagRow {
+  name: string;
+  token_count: number;
+}
+
+const SEARCH_TAGS_QUERY = /* GraphQL */ `
+  query SearchTags($q: String!, $limit: Int!) {
+    tag(
+      where: { name: { _ilike: $q } }
+      order_by: { token_count: desc_nulls_last }
+      limit: $limit
+    ) {
+      name
+      token_count
+    }
+  }
+`;
+
+export async function searchTags(query: string, opts: { limit?: number } = {}): Promise<TagRow[]> {
+  const { limit = 50 } = opts;
+  const q = `%${query}%`;
+  const data = await objktQuery<{ tag: TagRow[] }>(SEARCH_TAGS_QUERY, { q, limit });
+  return data.tag;
+}
+
+const TOP_TAGS_QUERY = /* GraphQL */ `
+  query TopTags($limit: Int!) {
+    tag(order_by: { token_count: desc_nulls_last }, limit: $limit) {
+      name
+      token_count
+    }
+  }
+`;
+
+export async function getTopTags(opts: { limit?: number } = {}): Promise<TagRow[]> {
+  const { limit = 30 } = opts;
+  const data = await objktQuery<{ tag: TagRow[] }>(TOP_TAGS_QUERY, { limit });
+  return data.tag;
+}
+
+const TOKENS_BY_TAG_QUERY = /* GraphQL */ `
+  query TokensByTag($tag: String!, $since: timestamptz, $until: timestamptz, $limit: Int!) {
+    token(
+      where: {
+        tags: { tag: { name: { _eq: $tag } } }
+        timestamp: { _gte: $since, _lte: $until }
+      }
+      order_by: { timestamp: desc }
+      limit: $limit
+    ) {
+      token_id
+      fa_contract
+      name
+      display_uri
+      thumbnail_uri
+      mime
+      supply
+      timestamp
+      fa {
+        name
+      }
+      creators {
+        holder {
+          address
+          alias
+        }
+      }
+      listings_active: listings(
+        where: { status: { _eq: "active" }, currency_id: { _eq: "1" } }
+        order_by: { price: asc }
+        limit: 1
+      ) {
+        price
+        marketplace_contract
+      }
+    }
+  }
+`;
+
+export async function getTokensByTag(
+  tag: string,
+  opts: { since?: string; until?: string; limit?: number } = {},
+): Promise<LatestMintToken[]> {
+  const { since, until, limit = 60 } = opts;
+  const data = await objktQuery<{ token: LatestMintToken[] }>(TOKENS_BY_TAG_QUERY, {
+    tag,
+    since: since ?? "1970-01-01T00:00:00Z",
+    until: until ?? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    limit,
+  });
+  return data.token;
+}
+
 // Sales where a given wallet was the buyer (for /pnl cost-basis)
 
 const SALES_BY_BUYER_QUERY = /* GraphQL */ `
