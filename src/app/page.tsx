@@ -44,10 +44,13 @@ export default async function Home() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
       <section className="mb-12">
         <h1 className="sr-only">Tezos Open Tools</h1>
-        {/* Wide ASCII art on tablet+ — single horizontal line. */}
+        {/* Wide ASCII art on tablet+ — single horizontal line.
+            Wrapper handles overflow so the <pre> doesn't generate its own
+            scroll context (which Chrome sometimes shows as a stub scrollbar). */}
+        <div className="hidden sm:block overflow-hidden">
         <pre
           aria-hidden
-          className="hidden sm:block font-mono leading-none text-zinc-900 dark:text-zinc-100 whitespace-pre overflow-hidden text-[10px] md:text-xs"
+          className="font-mono leading-none text-zinc-900 dark:text-zinc-100 whitespace-pre m-0 text-[10px] md:text-xs"
         >{`  $$\\                                                                                                   $$\\                         $$\\
   $$ |                                                                                                  $$ |                        $$ |
 $$$$$$\\    $$$$$$\\  $$$$$$$$\\  $$$$$$\\   $$$$$$$\\        $$$$$$\\   $$$$$$\\   $$$$$$\\  $$$$$$$\\        $$$$$$\\    $$$$$$\\   $$$$$$\\  $$ | $$$$$$$\\
@@ -59,10 +62,12 @@ $$$$$$\\    $$$$$$\\  $$$$$$$$\\  $$$$$$\\   $$$$$$$\\        $$$$$$\\   $$$$$$\
                                                                   $$ |
                                                                   $$ |
                                                                   \\__|`}</pre>
+        </div>
         {/* Stacked ASCII art on mobile — three words wrapped. */}
+        <div className="sm:hidden overflow-hidden">
         <pre
           aria-hidden
-          className="sm:hidden font-mono leading-none text-zinc-900 dark:text-zinc-100 whitespace-pre overflow-hidden text-[8px]"
+          className="font-mono leading-none text-zinc-900 dark:text-zinc-100 whitespace-pre m-0 text-[8px]"
         >{`  $$\\
   $$ |
 $$$$$$\\    $$$$$$\\  $$$$$$$$\\  $$$$$$\\   $$$$$$$\\
@@ -92,6 +97,7 @@ $$$$$$\\    $$$$$$\\   $$$$$$\\  $$ | $$$$$$$\\
   $$ |$$\\ $$ |  $$ |$$ |  $$ |$$ | \\____$$\\
   \\$$$$  |\\$$$$$$  |\\$$$$$$  |$$ |$$$$$$$  |
    \\____/  \\______/  \\______/ \\__|\\_______/`}</pre>
+        </div>
         <p className="mt-3 text-zinc-600 dark:text-zinc-400 max-w-2xl">
           An <strong className="text-zinc-900 dark:text-zinc-100">open-source</strong> suite of tools
           for Tezos NFT collectors and artists. Free forever, MIT licensed, no logins, no rate limits,
