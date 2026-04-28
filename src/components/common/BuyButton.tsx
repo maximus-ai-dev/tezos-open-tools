@@ -169,9 +169,10 @@ export function BuyButton({
           </div>
         )}
         <p className="mt-3 text-xs text-zinc-500">
-          Beacon will show the operation params again before final signing. The referral fee on this
-          purchase routes to the deployment&apos;s configured wallet (see{" "}
-          <code className="font-mono">REFERRAL_WALLET</code> in src/lib/constants.ts).
+          Beacon will show the operation params again before final signing. On objkt marketplaces
+          the referral fee routes to this deployment&apos;s configured wallet (see{" "}
+          <code className="font-mono">REFERRAL_WALLET</code> in src/lib/constants.ts). HEN and Teia
+          contracts don&apos;t expose a referrer field, so no referral applies for those.
         </p>
       </ConfirmDialog>
 
