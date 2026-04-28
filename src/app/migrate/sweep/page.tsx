@@ -22,7 +22,7 @@ type Status =
   | "ready"
   | "building"
   | "signing"
-  | "diagnosing"
+  | "checking"
   | "done"
   | "error";
 
@@ -170,7 +170,7 @@ export default function SweepPage() {
       // FA2: pre-simulate every per-contract op (throttled, with retries) to
       // catch contracts that would fail at signing time. FA1.2 contracts are
       // standardized enough to skip this — and would just slow us down.
-      setStatus("diagnosing");
+      setStatus("checking");
       setDiagProgress({ done: 0, total: 0 });
       const [fa2Result, fa12Ops] = await Promise.all([
         fa2Transfers.length > 0
@@ -478,10 +478,10 @@ export default function SweepPage() {
                 )}
               </div>
             )}
-            {status === "diagnosing" && (
+            {status === "checking" && (
               <div className="mb-3 rounded-md p-3 text-sm bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                 <p>
-                  Diagnosing {diagProgress.done} / {diagProgress.total || "…"} contracts (3
+                  Checking {diagProgress.done} / {diagProgress.total || "…"} contracts (3
                   concurrent, retries on rate-limit). No wallet prompts — read-only RPC simulation.
                 </p>
               </div>
@@ -489,11 +489,11 @@ export default function SweepPage() {
             <button
               type="button"
               onClick={() => setConfirmOpen(true)}
-              disabled={!ready || status === "signing" || status === "building" || status === "diagnosing"}
+              disabled={!ready || status === "signing" || status === "building" || status === "checking"}
               className="w-full px-4 py-3 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
-              {status === "diagnosing"
-                ? `Diagnosing ${diagProgress.done} / ${diagProgress.total || "…"}…`
+              {status === "checking"
+                ? `Checking transfers ${diagProgress.done} / ${diagProgress.total || "…"}…`
                 : status === "building"
                 ? "Preparing operations…"
                 : status === "signing"
