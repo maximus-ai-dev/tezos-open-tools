@@ -15,7 +15,7 @@ import type { WalletParamsWithKind } from "@taquito/taquito";
 
 const CHUNK_SIZE = 50;
 
-type Status = "idle" | "loading" | "ready" | "signing" | "done" | "error";
+type Status = "idle" | "loading" | "ready" | "building" | "signing" | "done" | "error";
 
 export default function SweepPage() {
   const { address, status: walletStatus, connect } = useWallet();
@@ -133,7 +133,7 @@ export default function SweepPage() {
   async function sweep() {
     setConfirmOpen(false);
     if (!ready || !address) return;
-    setStatus("signing");
+    setStatus("building");
     setError(null);
     setProgress({ batch: 0, total: 0, opHashes: [] });
     try {
@@ -150,21 +150,19 @@ export default function SweepPage() {
         .filter((a) => a.standard === "fa1.2")
         .map((a) => ({ fa: a.fa, to: destination, amount: a.balance }));
 
-      const allOps: WalletParamsWithKind[] = [];
-      if (fa2Transfers.length > 0) {
-        const fa2Ops = await buildFa2BatchTransfer(address, fa2Transfers);
-        allOps.push(...fa2Ops);
-      }
-      if (fa12Transfers.length > 0) {
-        const fa12Ops = await buildFa12BatchTransfer(address, fa12Transfers);
-        allOps.push(...fa12Ops);
-      }
+      // Build FA2 + FA1.2 in parallel (each parallelizes its own contract fetches).
+      const [fa2Ops, fa12Ops] = await Promise.all([
+        fa2Transfers.length > 0 ? buildFa2BatchTransfer(address, fa2Transfers) : Promise.resolve([]),
+        fa12Transfers.length > 0 ? buildFa12BatchTransfer(address, fa12Transfers) : Promise.resolve([]),
+      ]);
+      const allOps: WalletParamsWithKind[] = [...fa2Ops, ...fa12Ops];
 
       // Chunk into multiple signed batches if too big.
       const chunks: WalletParamsWithKind[][] = [];
       for (let i = 0; i < allOps.length; i += CHUNK_SIZE) {
         chunks.push(allOps.slice(i, i + CHUNK_SIZE));
       }
+      setStatus("signing");
       setProgress({ batch: 0, total: chunks.length, opHashes: [] });
 
       const opHashes: string[] = [];
@@ -350,16 +348,20 @@ export default function SweepPage() {
             <button
               type="button"
               onClick={() => setConfirmOpen(true)}
-              disabled={!ready || status === "signing"}
+              disabled={!ready || status === "signing" || status === "building"}
               className="w-full px-4 py-3 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
-              {status === "signing"
-                ? `Signing batch ${progress.batch} / ${progress.total}…`
-                : !validDest || !destMatches
-                  ? "Enter a destination address"
-                  : selectedAssets.length === 0
-                    ? "Select something to sweep"
-                    : `Sweep ${selectedAssets.length} asset${selectedAssets.length === 1 ? "" : "s"} → ${shortAddress(destination)}`}
+              {status === "building"
+                ? "Preparing operations…"
+                : status === "signing"
+                  ? progress.total === 0
+                    ? "Awaiting wallet…"
+                    : `Signing batch ${progress.batch + 1} / ${progress.total}…`
+                  : !validDest || !destMatches
+                    ? "Enter a destination address"
+                    : selectedAssets.length === 0
+                      ? "Select something to sweep"
+                      : `Sweep ${selectedAssets.length} asset${selectedAssets.length === 1 ? "" : "s"} → ${shortAddress(destination)}`}
             </button>
           </div>
 
@@ -394,7 +396,7 @@ export default function SweepPage() {
         open={confirmOpen}
         title={`Sweep ${selectedAssets.length} asset${selectedAssets.length === 1 ? "" : "s"}?`}
         confirmLabel={`Sign — sweep to ${shortAddress(destination)}`}
-        busy={status === "signing"}
+        busy={status === "signing" || status === "building"}
         onConfirm={() => void sweep()}
         onCancel={() => setConfirmOpen(false)}
         warning={

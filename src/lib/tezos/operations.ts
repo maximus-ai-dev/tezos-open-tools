@@ -33,19 +33,17 @@ export async function buildFa2BatchTransfer(
     byContract.set(t.fa, txs);
   }
 
+  // Fetch every contract abstraction in parallel — a sequential loop here is
+  // the dominant cost when sweeping NFTs from 30+ collections.
   const tezos = getTezos();
-  const ops: WalletParamsWithKind[] = [];
-  for (const [fa, txs] of byContract) {
-    const contract = await tezos.wallet.at(fa);
-    const params = contract.methodsObject
+  const entries = [...byContract.entries()];
+  const contracts = await Promise.all(entries.map(([fa]) => tezos.wallet.at(fa)));
+  return entries.map(([, txs], i) => {
+    const params = contracts[i]!.methodsObject
       .transfer([{ from_: sender, txs }])
       .toTransferParams();
-    ops.push({
-      kind: "transaction" as const,
-      ...params,
-    } as WalletParamsWithKind);
-  }
-  return ops;
+    return { kind: "transaction" as const, ...params } as WalletParamsWithKind;
+  });
 }
 
 export interface Fa12Transfer {
@@ -63,18 +61,20 @@ export async function buildFa12BatchTransfer(
   transfers: Fa12Transfer[],
 ): Promise<WalletParamsWithKind[]> {
   const tezos = getTezos();
-  const ops: WalletParamsWithKind[] = [];
-  for (const t of transfers) {
-    const contract = await tezos.wallet.at(t.fa);
-    const params = contract.methodsObject
-      .transfer({ from: sender, to: t.to, value: t.amount })
+  // Dedupe contract fetches — same FA1.2 token may appear once per recipient.
+  const uniqueFas = [...new Set(transfers.map((t) => t.fa))];
+  const contractByFa = new Map(
+    await Promise.all(
+      uniqueFas.map(async (fa) => [fa, await tezos.wallet.at(fa)] as const),
+    ),
+  );
+  return transfers.map((t) => {
+    const params = contractByFa
+      .get(t.fa)!
+      .methodsObject.transfer({ from: sender, to: t.to, value: t.amount })
       .toTransferParams();
-    ops.push({
-      kind: "transaction" as const,
-      ...params,
-    } as WalletParamsWithKind);
-  }
-  return ops;
+    return { kind: "transaction" as const, ...params } as WalletParamsWithKind;
+  });
 }
 
 export interface SendResult {
