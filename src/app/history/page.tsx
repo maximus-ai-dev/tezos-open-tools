@@ -211,6 +211,8 @@ function TokenHeader({
                   priceMutez={lowestListing.price}
                   amountAvailable={lowestListing.amount_left}
                   tokenName={name}
+                  fa={fa}
+                  tokenId={tokenId}
                   variant="full"
                 />
               )}

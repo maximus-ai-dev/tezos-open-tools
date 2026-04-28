@@ -9,7 +9,7 @@ import {
 } from "@/lib/objkt";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
-import { BuyButton } from "@/components/common/BuyButton";
+import { TokenBuyFooter } from "@/components/common/TokenBuyFooter";
 import { WatchButton } from "@/components/common/WatchButton";
 import { ActivityHeatmap } from "@/components/common/ActivityHeatmap";
 import { formatTez, isTezosAddress, shortAddress } from "@/lib/utils";
@@ -125,21 +125,15 @@ export default async function WalletProfilePage({ params }: PageProps) {
                     displayUri: t.display_uri,
                     supply: t.supply,
                   }}
-                  priceMutez={listing?.price ?? null}
+                  priceMutez={listing?.price ?? t.open_edition_active?.price ?? null}
                   marketplaceLabel={
-                    listing ? MARKETPLACE_NAMES[listing.marketplace_contract] : null
+                    listing
+                      ? MARKETPLACE_NAMES[listing.marketplace_contract]
+                      : t.open_edition_active
+                        ? "open edition"
+                        : null
                   }
-                  footer={
-                    listing?.bigmap_key !== null && listing?.bigmap_key !== undefined ? (
-                      <BuyButton
-                        marketplaceContract={listing.marketplace_contract}
-                        askId={listing.bigmap_key}
-                        priceMutez={listing.price}
-                        amountAvailable={listing.amount_left}
-                        tokenName={t.name}
-                      />
-                    ) : null
-                  }
+                  footer={<TokenBuyFooter token={t} />}
                 />
               );
             })}

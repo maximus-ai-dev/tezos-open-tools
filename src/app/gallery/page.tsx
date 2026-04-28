@@ -5,7 +5,7 @@ import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
 import { WatchButton } from "@/components/common/WatchButton";
 import { PinButton } from "@/components/common/PinButton";
-import { BuyButton } from "@/components/common/BuyButton";
+import { TokenBuyFooter } from "@/components/common/TokenBuyFooter";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 import { isTezosAddress } from "@/lib/utils";
 
@@ -66,22 +66,18 @@ async function Creations({ address }: { address: string }) {
                 artistAddress: address,
                 supply: t.supply,
               }}
-              priceMutez={listing?.price ?? null}
+              priceMutez={listing?.price ?? t.open_edition_active?.price ?? null}
               marketplaceLabel={
-                listing ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace" : null
+                listing
+                  ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace"
+                  : t.open_edition_active
+                    ? "open edition"
+                    : null
               }
               badge={t.supply !== null ? `ed ${t.supply}` : null}
               footer={
                 <div className="flex items-center gap-2 flex-wrap">
-                  {listing?.bigmap_key !== null && listing?.bigmap_key !== undefined && (
-                    <BuyButton
-                      marketplaceContract={listing.marketplace_contract}
-                      askId={listing.bigmap_key}
-                      priceMutez={listing.price}
-                      amountAvailable={listing.amount_left}
-                      tokenName={t.name}
-                    />
-                  )}
+                  <TokenBuyFooter token={t} />
                   <PinButton fa={t.fa_contract} tokenId={t.token_id} />
                 </div>
               }

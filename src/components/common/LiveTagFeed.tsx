@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { LatestMintToken } from "@/lib/objkt";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
-import { BuyButton } from "@/components/common/BuyButton";
+import { TokenBuyFooter } from "@/components/common/TokenBuyFooter";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 
 interface LiveTagFeedProps {
@@ -139,22 +139,16 @@ export function LiveTagFeed({
                   artistAlias: creator?.alias ?? null,
                   supply: t.supply,
                 }}
-                priceMutez={listing?.price ?? null}
+                priceMutez={listing?.price ?? t.open_edition_active?.price ?? null}
                 marketplaceLabel={
-                  listing ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? null : null
+                  listing
+                    ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? null
+                    : t.open_edition_active
+                      ? "open edition"
+                      : null
                 }
                 badge={isNew ? "NEW" : null}
-                footer={
-                  listing?.bigmap_key !== null && listing?.bigmap_key !== undefined ? (
-                    <BuyButton
-                      marketplaceContract={listing.marketplace_contract}
-                      askId={listing.bigmap_key}
-                      priceMutez={listing.price}
-                      amountAvailable={listing.amount_left}
-                      tokenName={t.name}
-                    />
-                  ) : null
-                }
+                footer={<TokenBuyFooter token={t} />}
               />
             );
           })}

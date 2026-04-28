@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { buildBuyBatch, isBuyable, sendBatch } from "@/lib/tezos/operations";
-import { MARKETPLACE_NAMES } from "@/lib/constants";
+import { MARKETPLACE_NAMES, objktTokenLink } from "@/lib/constants";
 import { formatTez } from "@/lib/utils";
 
 interface BuyButtonProps {
@@ -18,6 +18,10 @@ interface BuyButtonProps {
   amountAvailable: number;
   /** for the confirmation dialog body */
   tokenName?: string | null;
+  /** FA contract + tokenId — used to build the objkt redirect when this
+   *  marketplace doesn't have an inline-buy implementation. */
+  fa: string;
+  tokenId: string;
   /** small button (used inline on cards) vs full-width (used on detail pages) */
   variant?: "compact" | "full";
 }
@@ -28,6 +32,8 @@ export function BuyButton({
   priceMutez,
   amountAvailable,
   tokenName,
+  fa,
+  tokenId,
   variant = "compact",
 }: BuyButtonProps) {
   const { address, status, connect } = useWallet();
@@ -38,8 +44,27 @@ export function BuyButton({
 
   const supported = isBuyable(marketplaceContract);
 
+  // Marketplace we don't have an inline-buy implementation for (objkt's
+  // open-edition handlers, Versum, fxhash secondary, etc.). Show an explicit
+  // redirect link rather than nothing — keeps the path obvious.
   if (!supported) {
-    return null;
+    const marketLabel = MARKETPLACE_NAMES[marketplaceContract] ?? "objkt";
+    return (
+      <a
+        href={objktTokenLink(fa, tokenId)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        title={`Inline buy not yet supported for ${marketLabel} — opens objkt.com in a new tab.`}
+        className={
+          variant === "compact"
+            ? "text-[11px] px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900 font-medium"
+            : "px-4 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900 font-medium"
+        }
+      >
+        Buy on objkt ↗
+      </a>
+    );
   }
 
   const safeQty = Math.max(1, Math.min(amountAvailable, Math.floor(quantity)));

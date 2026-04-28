@@ -90,6 +90,8 @@ async function Floor({ fa }: { fa: string }) {
                   priceMutez={l.price}
                   amountAvailable={l.amount_left}
                   tokenName={tok.name}
+                  fa={tok.fa_contract}
+                  tokenId={tok.token_id}
                 />
               }
             />

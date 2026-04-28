@@ -2,7 +2,7 @@ import { getLatestMints } from "@/lib/objkt";
 import { PageShell } from "@/components/common/PageShell";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
-import { BuyButton } from "@/components/common/BuyButton";
+import { TokenBuyFooter } from "@/components/common/TokenBuyFooter";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,7 @@ export default async function FeedPage() {
           {tokens.map((t) => {
             const listing = t.listings_active[0];
             const creator = t.creators?.[0]?.holder;
+            const displayPrice = listing?.price ?? t.open_edition_active?.price ?? null;
             return (
               <TokenCard
                 key={`${t.fa_contract}:${t.token_id}`}
@@ -34,22 +35,16 @@ export default async function FeedPage() {
                   artistAlias: creator?.alias ?? null,
                   supply: t.supply,
                 }}
-                priceMutez={listing?.price ?? null}
+                priceMutez={displayPrice}
                 marketplaceLabel={
-                  listing ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace" : null
+                  listing
+                    ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace"
+                    : t.open_edition_active
+                      ? "open edition"
+                      : null
                 }
                 badge={t.supply !== null ? `ed ${t.supply}` : null}
-                footer={
-                  listing?.bigmap_key !== null && listing?.bigmap_key !== undefined ? (
-                    <BuyButton
-                      marketplaceContract={listing.marketplace_contract}
-                      askId={listing.bigmap_key}
-                      priceMutez={listing.price}
-                      amountAvailable={listing.amount_left}
-                      tokenName={t.name}
-                    />
-                  ) : null
-                }
+                footer={<TokenBuyFooter token={t} />}
               />
             );
           })}

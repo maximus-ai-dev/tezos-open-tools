@@ -155,6 +155,8 @@ async function Variations({ fa, sort }: { fa: string; sort: VariationSort }) {
                       priceMutez={listing.price}
                       amountAvailable={listing.amount_left}
                       tokenName={t.name}
+                      fa={t.fa_contract}
+                      tokenId={t.token_id}
                     />
                   </div>
                 )}

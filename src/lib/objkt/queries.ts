@@ -188,6 +188,14 @@ export interface CreatedToken {
     amount_left: number;
     marketplace_contract: string;
   }>;
+  /** Open-edition drop on objkt's fixed-pricing handlers — present when there's
+   *  an active open edition we can't inline-buy (sale_id isn't exposed by
+   *  objkt's GraphQL). Pages should surface this as a "Buy on objkt ↗" link. */
+  open_edition_active: {
+    price: number;
+    start_time: string | null;
+    end_time: string | null;
+  } | null;
 }
 
 const CREATIONS_QUERY = /* GraphQL */ `
@@ -219,6 +227,11 @@ const CREATIONS_QUERY = /* GraphQL */ `
         price
         amount_left
         marketplace_contract
+      }
+      open_edition_active {
+        price
+        start_time
+        end_time
       }
     }
   }
@@ -702,6 +715,11 @@ const CREATIONS_BY_AUTHORS_QUERY = /* GraphQL */ `
         price
         amount_left
         marketplace_contract
+      }
+      open_edition_active {
+        price
+        start_time
+        end_time
       }
     }
   }
@@ -1225,6 +1243,11 @@ const LATEST_MINTS_QUERY = /* GraphQL */ `
         amount_left
         marketplace_contract
       }
+      open_edition_active {
+        price
+        start_time
+        end_time
+      }
     }
   }
 `;
@@ -1313,6 +1336,11 @@ const FA_TOKENS_QUERY = /* GraphQL */ `
         price
         amount_left
         marketplace_contract
+      }
+      open_edition_active {
+        price
+        start_time
+        end_time
       }
     }
   }
@@ -1569,6 +1597,11 @@ const TOKENS_BY_TAG_QUERY = /* GraphQL */ `
         price
         amount_left
         marketplace_contract
+      }
+      open_edition_active {
+        price
+        start_time
+        end_time
       }
     }
   }
