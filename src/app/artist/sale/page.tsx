@@ -94,7 +94,7 @@ export default function ManageSwapsPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Manage Swaps</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Manage Listings</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           Your active listings across Tezos marketplaces. Select multiple and cancel them in a
           single batched operation. Supported on objkt, HEN v2, and Teia.

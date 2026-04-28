@@ -17,7 +17,7 @@ export default async function FansPage({ searchParams }: PageProps) {
 
   return (
     <PageShell
-      title="Fans / Collectors"
+      title="Top Collectors"
       description="People who hold the most tokens by this artist."
     >
       <WalletInputForm

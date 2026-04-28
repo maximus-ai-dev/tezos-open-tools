@@ -16,7 +16,7 @@ export default async function ComparePage({ searchParams }: PageProps) {
 
   return (
     <PageShell
-      title="Cross-marketplace Floor Compare"
+      title="Marketplace Spread"
       description="For an artist wallet, see how their active listings break down across marketplaces. Useful for collectors deciding where to buy and artists deciding where to list."
     >
       <WalletInputForm

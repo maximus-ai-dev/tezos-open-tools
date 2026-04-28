@@ -57,16 +57,16 @@ check "fxhash sales" "$BASE/fxhash/sales" "fxhash Sales"
 check "fxhash follow" "$BASE/fxhash/follow" "fxhash Secondary"
 check "fxhash offers" "$BASE/fxhash/offers" "fxhash Collection Offers"
 check "follow" "$BASE/follow" "Follow Feed"
-check "artist follow" "$BASE/artist/follow" "Following Analysis"
+check "artist follow" "$BASE/artist/follow" "Watched Artists Feed"
 check "config monitoring" "$BASE/config/monitoring" "Monitoring Config"
 check "transfer" "$BASE/migrate/transfer" "Transfer Tokens"
-check "giveaway" "$BASE/giveaway" "Giveaway"
-check "manage swaps" "$BASE/artist/sale" "Manage Swaps"
+check "giveaway" "$BASE/giveaway" "Airdrop"
+check "manage swaps" "$BASE/artist/sale" "Manage Listings"
 check "artist offers" "$BASE/artist/offers" "Artist Offers"
 check "events" "$BASE/event?contract=$FA" "Contract Events"
 check "settings" "$BASE/settings" "Settings"
-check "mempool" "$BASE/mempool" "Gas Station"
-check "mempool drop empty" "$BASE/mempool/drop" "Drop Analysis"
+check "mempool" "$BASE/mempool" "Network Status"
+check "mempool drop empty" "$BASE/mempool/drop" "Contract Watch"
 
 # Remaining stubs — should still explicitly say "not yet implemented"
 for slug in barter genart/batch; do
@@ -77,8 +77,8 @@ done
 check "pin ready" "$BASE/pin" "Pin Your Art"
 
 # Newly upgraded — should NOT be stubs anymore
-check "swap/batch ready" "$BASE/swap/batch" "Batch Swap"
-check "swap/reswap ready" "$BASE/swap/reswap" "Batch Reswap"
+check "swap/batch ready" "$BASE/swap/batch" "Bulk List"
+check "swap/reswap ready" "$BASE/swap/reswap" "Re-list"
 check "fxhash/explorer ready" "$BASE/fxhash/explorer?fa=KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" "Newest"
 
 # API endpoints

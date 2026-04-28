@@ -18,7 +18,7 @@ export default async function DuplicatePage({ searchParams }: PageProps) {
 
   return (
     <PageShell
-      title="Multiple Editions"
+      title="Duplicate Editions"
       description="Tokens you hold more than one of — useful for resale planning."
     >
       <WalletInputForm action="/duplicate" initial={address ?? ""} />

@@ -18,7 +18,7 @@ export default async function FxhashFloorPage({ searchParams }: PageProps) {
   const fa = faParam ? parseContractInput(faParam) : null;
   return (
     <PageShell
-      title="Floor Broom"
+      title="fxhash Floor"
       description="Cheapest active listings in a collection — useful for sweeping the floor."
     >
       <WalletInputForm

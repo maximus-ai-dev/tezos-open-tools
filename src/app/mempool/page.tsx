@@ -56,7 +56,7 @@ export default function MempoolPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Gas Station</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Network Status</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           Tezos network status — current head, last 15 blocks, refreshed every 8 seconds.
         </p>

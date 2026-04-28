@@ -19,7 +19,7 @@ export default async function ResalePage({ searchParams }: PageProps) {
 
   return (
     <PageShell
-      title="Collected Artworks"
+      title="Your Collection"
       description="Tokens held in this wallet, with current floor on objkt."
     >
       <WalletInputForm action="/resale" initial={address ?? ""} />

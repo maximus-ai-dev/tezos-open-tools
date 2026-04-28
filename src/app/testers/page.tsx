@@ -38,7 +38,7 @@ export default function TestersPage() {
           <li><L href="/live">Live Feed</L> — should update with new sales every ~4 seconds</li>
           <li><L href="/history">Token History</L> — paste any objkt token URL into the search box</li>
           <li>
-            <L href="/resale?address=tz1RikSsVF7CK1iFq12dYG11M2RXwKkEfECm">Collected Artworks</L> —
+            <L href="/resale?address=tz1RikSsVF7CK1iFq12dYG11M2RXwKkEfECm">Your Collection</L> —
             try with your own wallet address
           </li>
           <li>
@@ -61,10 +61,10 @@ export default function TestersPage() {
           <li><L href="/offers/manage">Your Offers</L> — outgoing offers (just looks)</li>
           <li><L href="/offers/received">Offers Received</L> — incoming offers on stuff you own</li>
           <li>
-            <L href="/artist/sale">Manage Swaps</L> — your active listings.{" "}
+            <L href="/artist/sale">Manage Listings</L> — your active listings.{" "}
             <strong>Don&apos;t click cancel yet</strong>, just see if the list looks right.
           </li>
-          <li><L href="/swap/batch">Batch Swap</L> — should auto-load your held tokens</li>
+          <li><L href="/swap/batch">Bulk List</L> — should auto-load your held tokens</li>
         </ul>
       </Section>
 
@@ -83,12 +83,12 @@ export default function TestersPage() {
             with the right info, your wallet popup shows the params, the op succeeds on tzkt.io.
           </li>
           <li>
-            <L href="/artist/sale">Manage Swaps</L> — cancel one cheap active listing. (You can
+            <L href="/artist/sale">Manage Listings</L> — cancel one cheap active listing. (You can
             re-list later for the same price.)
           </li>
           <li>
-            <L href="/swap/batch">Batch Swap</L> — list a single cheap token at, say, 99 ꜩ (high
-            enough nobody buys by accident). Then immediately cancel it via Manage Swaps.
+            <L href="/swap/batch">Bulk List</L> — list a single cheap token at, say, 99 ꜩ (high
+            enough nobody buys by accident). Then immediately cancel it via Manage Listings.
           </li>
         </ol>
       </Section>

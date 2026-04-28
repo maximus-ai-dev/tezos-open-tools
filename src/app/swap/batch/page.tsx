@@ -147,7 +147,7 @@ export default function BatchSwapPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Batch Swap</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Bulk List</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           List many tokens for sale on objkt v6.2 in a single signing prompt. Each row creates one
           ask; we add operator approval for the marketplace per FA contract automatically.

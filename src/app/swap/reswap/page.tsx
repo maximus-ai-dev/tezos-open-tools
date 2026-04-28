@@ -163,7 +163,7 @@ export default function BatchReswapPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Batch Reswap / Unswap</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Re-list & Cancel</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           Cancel many listings and (optionally) re-list them at a new price in one signing prompt.
           Re-listings always go to objkt v6.2; if a listing was originally on a different
