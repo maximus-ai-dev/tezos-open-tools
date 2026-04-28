@@ -8,6 +8,7 @@ import {
   BatchBuildError,
   buildFa2BatchTransfer,
   buildFa12BatchTransfer,
+  diagnoseFa2Transfers,
   sendBatch,
 } from "@/lib/tezos/operations";
 import { isTezosAddress, ipfsToHttp, shortAddress } from "@/lib/utils";
@@ -16,7 +17,15 @@ import type { WalletParamsWithKind } from "@taquito/taquito";
 
 const DEFAULT_CHUNK_SIZE = 20;
 
-type Status = "idle" | "loading" | "ready" | "building" | "signing" | "done" | "error";
+type Status =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "building"
+  | "signing"
+  | "diagnosing"
+  | "done"
+  | "error";
 
 export default function SweepPage() {
   const { address, status: walletStatus, connect } = useWallet();
@@ -36,6 +45,10 @@ export default function SweepPage() {
   const [failedContracts, setFailedContracts] = useState<string[]>([]);
   const [failedTokens, setFailedTokens] = useState<Array<{ fa: string; tokenId: string }>>([]);
   const [chunkSize, setChunkSize] = useState<number>(DEFAULT_CHUNK_SIZE);
+  const [diagProgress, setDiagProgress] = useState<{ done: number; total: number }>({
+    done: 0,
+    total: 0,
+  });
 
   useEffect(() => {
     if (!address) return;
@@ -203,6 +216,47 @@ export default function SweepPage() {
         setFailedTokens([]);
         setError(err instanceof Error ? err.message : String(err));
       }
+      setStatus("error");
+    }
+  }
+
+  async function runDiagnostic() {
+    if (!address || !data) return;
+    setStatus("diagnosing");
+    setError(null);
+    setDiagProgress({ done: 0, total: 0 });
+    try {
+      const fa2Transfers = selectedAssets
+        .filter((a) => a.standard === "fa2")
+        .map((a) => ({
+          fa: a.fa,
+          tokenId: a.token_id,
+          to: destination || address,
+          amount: balanceAsNumber(a.balance),
+        }));
+      const result = await diagnoseFa2Transfers(address, fa2Transfers, (done, total) =>
+        setDiagProgress({ done, total }),
+      );
+      setFailedContracts(result.failedContracts);
+      setFailedTokens(result.failedTokens);
+      if (result.failedContracts.length === 0 && result.failedTokens.length === 0) {
+        setError(
+          "Diagnostic found no failures. Your selection should sign cleanly — try the Sweep button again.",
+        );
+      } else {
+        const parts: string[] = [];
+        if (result.failedContracts.length > 0) {
+          parts.push(`${result.failedContracts.length} contract${result.failedContracts.length === 1 ? "" : "s"}`);
+        }
+        if (result.failedTokens.length > 0) {
+          parts.push(`${result.failedTokens.length} token${result.failedTokens.length === 1 ? "" : "s"}`);
+        }
+        setError(`Diagnostic found ${parts.join(" and ")} that fail simulation. Click "Uncheck broken" below.`);
+      }
+      setStatus("error");
+    } catch (err) {
+      console.error("Diagnostic failed:", err);
+      setError(err instanceof Error ? err.message : String(err));
       setStatus("error");
     }
   }
@@ -443,19 +497,39 @@ export default function SweepPage() {
                   </>
                 )}
                 {failedContracts.length === 0 && failedTokens.length === 0 && (
-                  <p className="mt-2 text-xs">
-                    Open DevTools → Console for the full stack trace.
-                  </p>
+                  <>
+                    <p className="mt-2 text-xs">
+                      Run the diagnostic below to find which contract is failing simulation.
+                      Open DevTools → Console for the full stack trace.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void runDiagnostic()}
+                      className="mt-2 px-3 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 text-xs font-medium hover:opacity-90"
+                    >
+                      Run diagnostic (no signing — throttled simulation)
+                    </button>
+                  </>
                 )}
+              </div>
+            )}
+            {status === "diagnosing" && (
+              <div className="mb-3 rounded-md p-3 text-sm bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <p>
+                  Diagnosing {diagProgress.done} / {diagProgress.total || "…"} contracts (3
+                  concurrent, retries on rate-limit). No wallet prompts — read-only RPC simulation.
+                </p>
               </div>
             )}
             <button
               type="button"
               onClick={() => setConfirmOpen(true)}
-              disabled={!ready || status === "signing" || status === "building"}
+              disabled={!ready || status === "signing" || status === "building" || status === "diagnosing"}
               className="w-full px-4 py-3 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
-              {status === "building"
+              {status === "diagnosing"
+                ? `Diagnosing ${diagProgress.done} / ${diagProgress.total || "…"}…`
+                : status === "building"
                 ? "Preparing operations…"
                 : status === "signing"
                   ? progress.total === 0

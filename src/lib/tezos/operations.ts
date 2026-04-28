@@ -96,6 +96,92 @@ export async function buildFa2BatchTransfer(
   return ops;
 }
 
+/** Diagnoses an FA2 sweep selection by building per-contract transfer ops and
+ *  running RPC simulation against each one — throttled to avoid flooding free
+ *  RPC nodes — to surface contracts that would fail at signing time
+ *  (operator-required, paused, soulbound, malformed schemas, etc.).
+ *
+ *  Concurrency is intentionally low. Each op gets up to 3 attempts with
+ *  exponential backoff so 5xx rate-limit responses don't get treated as real
+ *  contract failures. */
+export async function diagnoseFa2Transfers(
+  sender: string,
+  transfers: Fa2Transfer[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<{
+  failedContracts: string[];
+  failedTokens: Array<{ fa: string; tokenId: string }>;
+}> {
+  // First pass: build per-contract ops, separating the obvious failures.
+  const byContract = new Map<string, Fa2TransferTx[]>();
+  const failedTokens: Array<{ fa: string; tokenId: string }> = [];
+  for (const t of transfers) {
+    if (!isValidTokenId(t.tokenId) || !Number.isFinite(t.amount) || t.amount < 1) {
+      failedTokens.push({ fa: t.fa, tokenId: String(t.tokenId) });
+      continue;
+    }
+    const txs = byContract.get(t.fa) ?? [];
+    txs.push({ to_: t.to, token_id: Number(t.tokenId), amount: t.amount });
+    byContract.set(t.fa, txs);
+  }
+
+  const tezos = getTezos();
+  const entries = [...byContract.entries()];
+  const settled = await Promise.allSettled(entries.map(([fa]) => tezos.wallet.at(fa)));
+  const failedContracts: string[] = [];
+  const taggedOps: Array<{ fa: string; op: WalletParamsWithKind }> = [];
+  settled.forEach((res, i) => {
+    const [fa, txs] = entries[i]!;
+    if (res.status === "rejected") {
+      failedContracts.push(fa);
+      return;
+    }
+    try {
+      const params = res.value.methodsObject
+        .transfer([{ from_: sender, txs }])
+        .toTransferParams();
+      taggedOps.push({
+        fa,
+        op: { kind: "transaction" as const, ...params } as WalletParamsWithKind,
+      });
+    } catch {
+      failedContracts.push(fa);
+    }
+  });
+
+  // Second pass: throttled simulation. 3 concurrent workers, up to 3 attempts
+  // per op with exponential backoff. Anything still failing after retries is
+  // recorded as a real contract failure.
+  const total = taggedOps.length;
+  let cursor = 0;
+  let done = 0;
+  async function worker() {
+    while (cursor < taggedOps.length) {
+      const idx = cursor++;
+      const { fa, op } = taggedOps[idx]!;
+      let attempts = 0;
+      let ok = false;
+      while (attempts < 3 && !ok) {
+        try {
+          await tezos.estimate.batch([op]);
+          ok = true;
+        } catch {
+          attempts++;
+          if (attempts < 3) {
+            await new Promise((r) => setTimeout(r, 400 * 2 ** (attempts - 1)));
+          }
+        }
+      }
+      if (!ok) failedContracts.push(fa);
+      done++;
+      onProgress?.(done, total);
+    }
+  }
+  await Promise.all(Array.from({ length: 3 }, () => worker()));
+
+  return { failedContracts, failedTokens };
+}
+
 export interface Fa12Transfer {
   fa: string;
   to: string;
