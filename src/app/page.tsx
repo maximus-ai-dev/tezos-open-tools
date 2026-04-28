@@ -47,7 +47,7 @@ export default async function Home() {
         {/* Wide ASCII art on tablet+ — single horizontal line. */}
         <pre
           aria-hidden
-          className="hidden sm:block font-mono leading-none text-zinc-900 dark:text-zinc-100 whitespace-pre overflow-x-auto text-[10px] md:text-xs"
+          className="hidden sm:block font-mono leading-none text-zinc-900 dark:text-zinc-100 whitespace-pre overflow-hidden text-[10px] md:text-xs"
         >{`  $$\\                                                                                                   $$\\                         $$\\
   $$ |                                                                                                  $$ |                        $$ |
 $$$$$$\\    $$$$$$\\  $$$$$$$$\\  $$$$$$\\   $$$$$$$\\        $$$$$$\\   $$$$$$\\   $$$$$$\\  $$$$$$$\\        $$$$$$\\    $$$$$$\\   $$$$$$\\  $$ | $$$$$$$\\
@@ -62,7 +62,7 @@ $$$$$$\\    $$$$$$\\  $$$$$$$$\\  $$$$$$\\   $$$$$$$\\        $$$$$$\\   $$$$$$\
         {/* Stacked ASCII art on mobile — three words wrapped. */}
         <pre
           aria-hidden
-          className="sm:hidden font-mono leading-none text-zinc-900 dark:text-zinc-100 whitespace-pre overflow-x-auto text-[8px]"
+          className="sm:hidden font-mono leading-none text-zinc-900 dark:text-zinc-100 whitespace-pre overflow-hidden text-[8px]"
         >{`  $$\\
   $$ |
 $$$$$$\\    $$$$$$\\  $$$$$$$$\\  $$$$$$\\   $$$$$$$\\
