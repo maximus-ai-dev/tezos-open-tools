@@ -45,13 +45,15 @@ function isValidTokenId(id: unknown): boolean {
 // Split a single contract's transfer call into chunks of N txs each. Tezos
 // caps gas at ~1.04M per operation; a `transfer` entrypoint loops over every
 // tx, so heavy contracts with many txs in one call hit gas_limit_too_high.
-// 8 keeps a comfortable margin even for expensive on-transfer hooks.
-const TXS_PER_TRANSFER_CALL = 8;
+// 5 is conservative even for expensive on-transfer hooks.
+const TXS_PER_TRANSFER_CALL = 5;
 
 // If a single op's gas estimate from the diagnostic exceeds this, we treat
-// the contract as too heavy to sweep — Taquito's safety margin during signing
-// would push declared gas_limit over the protocol cap (~1.04M).
-const MAX_PER_OP_GAS = 900_000;
+// the contract as too heavy to sweep. The protocol cap is ~1.04M, and the
+// signing-time gas usage can run notably higher than the standalone estimate
+// (cross-op state effects + wallet's own safety margin), so we leave a wide
+// gap.
+const MAX_PER_OP_GAS = 600_000;
 
 export async function buildFa2BatchTransfer(
   sender: string,

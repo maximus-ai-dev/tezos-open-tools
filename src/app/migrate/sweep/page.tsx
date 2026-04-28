@@ -185,12 +185,12 @@ export default function SweepPage() {
         throw new BatchBuildError(fa2Result.failedContracts, fa2Result.failedTokens);
       }
 
-      // Pack ops into batches by gas, not by count. Each Tezos block has a
-      // ~1.04M gas budget; we leave headroom and pack to ~700k per batch.
-      // FA1.2 ops don't have gas estimates from the diagnostic — assume an
-      // average that's safely above typical FA1.2 transfer cost.
-      const FA12_GAS_GUESS = 30_000;
-      const MAX_BATCH_GAS = 700_000;
+      // Pack ops into batches by gas. Block-level cap is ~5.2M but we keep
+      // batches small (400k) so there's headroom for the signing-time
+      // re-estimation, which can run higher than the standalone diagnostic.
+      // FA1.2 ops aren't diagnosed; budget a conservative 50k each.
+      const FA12_GAS_GUESS = 50_000;
+      const MAX_BATCH_GAS = 400_000;
       const fa12WithGas = fa12Ops.map((op) => ({ op, gas: FA12_GAS_GUESS }));
       const allOpsWithGas = [...fa2Result.ops, ...fa12WithGas];
 
