@@ -34,6 +34,10 @@ export default async function Home() {
     .flat()
     .filter((t) => t.status === "ready").length;
   const totalCount = Object.values(groups).flat().length;
+  // Server-side date check for the temporary event banner — `Date.now()` is
+  // intentional here (server components render once per request).
+  // eslint-disable-next-line react-hooks/purity
+  const showBanner = EVENT_BANNER !== null && Date.now() < new Date(EVENT_BANNER.endsAt).getTime();
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
@@ -97,7 +101,7 @@ export default async function Home() {
         </p>
       </section>
 
-      {EVENT_BANNER && Date.now() < new Date(EVENT_BANNER.endsAt).getTime() && (
+      {showBanner && EVENT_BANNER && (
         <Link
           href={EVENT_BANNER.href}
           className="block mb-12 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-gradient-to-br from-emerald-50 to-amber-50 dark:from-emerald-950 dark:to-amber-950 px-5 py-4 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors"
