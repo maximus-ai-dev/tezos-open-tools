@@ -10,13 +10,18 @@ interface Row {
   id: number;
   fa: string;
   tokenId: string;
+  /** Raw text the user has typed in the token field — kept verbatim so partial
+   *  inputs (e.g. mid-typing "KT1Foo") don't get swallowed by parseTokenInput
+   *  rejecting them. fa/tokenId are derived on every change but the input
+   *  always reflects what the user typed. */
+  tokenRaw: string;
   amount: string;
   to: string;
 }
 
 let nextId = 1;
 function newRow(): Row {
-  return { id: nextId++, fa: "", tokenId: "", amount: "1", to: "" };
+  return { id: nextId++, fa: "", tokenId: "", tokenRaw: "", amount: "1", to: "" };
 }
 
 export default function TransferTokensPage() {
@@ -31,10 +36,14 @@ export default function TransferTokensPage() {
   }
 
   function pasteTokenInto(id: number, text: string) {
+    // Always store the raw text so the user sees their keystrokes. If the text
+    // happens to parse as a complete (fa, tokenId) reference, set those too.
     const parsed = parseTokenInput(text);
-    if (parsed) {
-      updateRow(id, { fa: parsed.fa, tokenId: parsed.tokenId });
-    }
+    updateRow(id, {
+      tokenRaw: text,
+      fa: parsed?.fa ?? "",
+      tokenId: parsed?.tokenId ?? "",
+    });
   }
 
   function validate(): { ok: boolean; reason?: string } {
@@ -231,12 +240,22 @@ function RowInputs({
         <label className="block text-xs text-zinc-500 mb-1">Token (paste objkt URL or KT1:id)</label>
         <input
           type="text"
-          value={`${row.fa}${row.fa && row.tokenId ? ":" : ""}${row.tokenId}`}
+          value={row.tokenRaw}
           onChange={(e) => onPasteToken(e.target.value)}
           placeholder="objkt URL or KT1...:id"
           className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2 py-1 font-mono text-xs"
         />
-        <p className="mt-1 text-[10px] text-zinc-500">Resolves to {tokenSummary}</p>
+        <p
+          className={`mt-1 text-[10px] ${
+            row.tokenRaw && !row.fa
+              ? "text-amber-600 dark:text-amber-400"
+              : "text-zinc-500"
+          }`}
+        >
+          {row.tokenRaw && !row.fa
+            ? "Doesn't parse — paste a full objkt URL or KT1...:id"
+            : `Resolves to ${tokenSummary}`}
+        </p>
       </div>
       <div className="sm:col-span-2">
         <label className="block text-xs text-zinc-500 mb-1">Amount</label>

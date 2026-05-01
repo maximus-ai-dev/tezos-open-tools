@@ -1477,9 +1477,14 @@ export interface FloorListing {
 
 const FLOOR_QUERY = /* GraphQL */ `
   query Floor($fa: String!, $limit: Int!) {
-    listing_active(
-      where: { fa_contract: { _eq: $fa } }
-      order_by: { price: asc_nulls_last }
+    listing(
+      where: {
+        fa_contract: { _eq: $fa }
+        status: { _eq: "active" }
+        currency_id: { _eq: "1" }
+        amount_left: { _gt: 0 }
+      }
+      order_by: { price: asc }
       limit: $limit
     ) {
       id
@@ -1511,11 +1516,11 @@ export async function getFaFloor(
   opts: { limit?: number } = {},
 ): Promise<FloorListing[]> {
   const { limit = 60 } = opts;
-  const data = await objktQuery<{ listing_active: FloorListing[] }>(FLOOR_QUERY, {
+  const data = await objktQuery<{ listing: FloorListing[] }>(FLOOR_QUERY, {
     fa,
     limit,
   });
-  return data.listing_active;
+  return data.listing;
 }
 
 // Tags — substring search + token feed for community-event tags
@@ -1742,7 +1747,7 @@ const FA_HOLDERS_QUERY = /* GraphQL */ `
         token: { fa_contract: { _eq: $fa } }
         quantity: { _gt: "0" }
       }
-      order_by: { last_incremented_at: desc }
+      order_by: { quantity: desc }
       limit: $limit
       offset: $offset
     ) {

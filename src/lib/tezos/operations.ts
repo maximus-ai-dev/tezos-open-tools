@@ -396,14 +396,15 @@ export interface CancellableListing {
 }
 
 const CANCEL_BY_MARKETPLACE: Record<string, string> = {
-  // objkt — fixed pricing handlers and modern marketplaces use retract_ask
+  // objkt v1 / v4 / v6 / v6.1 / v6.2 — retract_ask(nat)
   KT1FvqJwEDWb1Gwc55Jd1jjTHRVWbYKUUpyq: "retract_ask",
   KT1WvzYHCNBvDSdwafTHv7nJ1dWmZ8GCYuuC: "retract_ask",
   KT1CePTyk6fk4cFr6fasY5YXPGks6ttjSLp4: "retract_ask",
   KT1Xjap1TwmDR1d8yEd8ErkraAj2mbdMrPZY: "retract_ask",
   KT1SwbTqhSKF6Pdokiu1K4Fpi17ahPPzmt1X: "retract_ask",
-  KT1NiZkkW82wsTKP95x8FefdiseDyU9vX66W: "retract_ask",
-  KT1KzmnX6Ffip7zVgGiCUV6ygqDU8hhGsMAy: "retract_ask",
+  // objkt fixed-pricing handlers (open editions) — different shape: unlist(nat)
+  KT1NiZkkW82wsTKP95x8FefdiseDyU9vX66W: "unlist",
+  KT1KzmnX6Ffip7zVgGiCUV6ygqDU8hhGsMAy: "unlist",
   // HEN v2, Teia
   KT1HbQepzV1nVGg8QVznG7z4RcHseD5kwqBn: "cancel_swap",
   KT1PHubm9HtyQEJ4BBpMTVomq6mhbfNZ9z5w: "cancel_swap",
@@ -413,15 +414,14 @@ export function isCancellable(marketplaceContract: string): boolean {
   return marketplaceContract in CANCEL_BY_MARKETPLACE;
 }
 
-// Marketplaces that accept incoming offers via `fulfill_offer(offer_id)`.
+// Marketplaces that accept incoming offers via `fulfill_offer({ offer_id, … })`.
+// FP handlers (KT1NiZkk… / KT1KzmnX…) don't accept offers at all — excluded.
 const ACCEPT_VIA_FULFILL_OFFER: ReadonlySet<string> = new Set([
   "KT1FvqJwEDWb1Gwc55Jd1jjTHRVWbYKUUpyq", // objkt v1
   "KT1WvzYHCNBvDSdwafTHv7nJ1dWmZ8GCYuuC", // objkt v4
   "KT1CePTyk6fk4cFr6fasY5YXPGks6ttjSLp4", // objkt v6
   "KT1Xjap1TwmDR1d8yEd8ErkraAj2mbdMrPZY", // objkt v6.1
   "KT1SwbTqhSKF6Pdokiu1K4Fpi17ahPPzmt1X", // objkt v6.2
-  "KT1NiZkkW82wsTKP95x8FefdiseDyU9vX66W", // objkt fp handler
-  "KT1KzmnX6Ffip7zVgGiCUV6ygqDU8hhGsMAy", // objkt fp handler 2
 ]);
 
 export function isAcceptableOffer(marketplaceContract: string): boolean {
@@ -674,10 +674,16 @@ export async function buildAcceptOffersBatch(
     ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
   }
 
-  // Phase 2: fulfill each offer.
+  // Phase 2: fulfill each offer. Schema across objkt v4 / v6 / v6.1 / v6.2 is
+  // `fulfill_offer({ offer_id: nat, token_id?: nat, [condition_extra?: bytes,
+  // referrers?: map] })`. Pass the object form via methodsObject; v6 also
+  // accepts a `referrers` field but we omit it here (offers route royalties
+  // through a different mechanism from list buys).
   for (const o of offers) {
     const mkt = await tezos.wallet.at(o.marketplaceContract);
-    const params = mkt.methodsObject.fulfill_offer(o.offerId).toTransferParams();
+    const params = mkt.methodsObject
+      .fulfill_offer({ offer_id: o.offerId })
+      .toTransferParams();
     ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
   }
 
