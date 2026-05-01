@@ -461,9 +461,11 @@ export interface BuyAsk {
 type BuyHandler = "fulfill_ask" | "collect_swap";
 
 const BUY_HANDLERS: Readonly<Record<string, BuyHandler>> = {
-  // objkt — fulfill_ask(ask_id, amount, proxy_for, condition_extra, referrers)
-  "KT1FvqJwEDWb1Gwc55Jd1jjTHRVWbYKUUpyq": "fulfill_ask", // objkt v1
-  "KT1WvzYHCNBvDSdwafTHv7nJ1dWmZ8GCYuuC": "fulfill_ask", // objkt v4
+  // objkt v6+ — fulfill_ask(ask_id, amount, proxy_for, condition_extra, referrers).
+  // v1 (KT1FvqJw…) and v4 (KT1WvzYH…) have *different* fulfill_ask signatures
+  // (single nat / no amount+referrers respectively) — calling the v6 shape on
+  // them errors out at signing. Those listings fall back to "Buy on objkt ↗"
+  // until per-version dispatchers are added.
   "KT1CePTyk6fk4cFr6fasY5YXPGks6ttjSLp4": "fulfill_ask", // objkt v6
   "KT1Xjap1TwmDR1d8yEd8ErkraAj2mbdMrPZY": "fulfill_ask", // objkt v6.1
   "KT1SwbTqhSKF6Pdokiu1K4Fpi17ahPPzmt1X": "fulfill_ask", // objkt v6.2
