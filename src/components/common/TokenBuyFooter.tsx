@@ -6,7 +6,7 @@ interface TokenBuyFooterProps {
     fa_contract: string;
     token_id: string;
     name: string | null;
-    listings_active: Array<{
+    listings_active?: Array<{
       bigmap_key: number | null;
       price: number;
       amount_left: number;
@@ -33,7 +33,7 @@ function isOpenEditionActive(oe: { start_time: string | null; end_time: string |
  *    by objkt's GraphQL so we can't inline-buy these yet)
  *  - nothing actionable → renders nothing */
 export function TokenBuyFooter({ token }: TokenBuyFooterProps) {
-  const listing = token.listings_active[0];
+  const listing = token.listings_active?.[0];
   if (listing && listing.bigmap_key !== null && listing.bigmap_key !== undefined) {
     return (
       <BuyButton

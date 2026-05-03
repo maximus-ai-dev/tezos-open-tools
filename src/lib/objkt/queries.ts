@@ -273,6 +273,20 @@ export interface SaleEvent {
     display_uri: string | null;
     thumbnail_uri: string | null;
     creators: Array<{ holder: { address: string; alias: string | null } }>;
+    /** Optional: only populated by queries that explicitly request it (e.g.
+     *  RECENT_SALES_BY_PRICE_QUERY for /topsales). Used to render an inline
+     *  Buy button next to the historical sale price. */
+    listings_active?: Array<{
+      bigmap_key: number | null;
+      price: number;
+      amount_left: number;
+      marketplace_contract: string;
+    }>;
+    open_edition_active?: {
+      price: number;
+      start_time: string | null;
+      end_time: string | null;
+    } | null;
   } | null;
 }
 
@@ -302,6 +316,21 @@ const RECENT_SALES_BY_PRICE_QUERY = /* GraphQL */ `
             address
             alias
           }
+        }
+        listings_active: listings(
+          where: { status: { _eq: "active" }, currency_id: { _eq: "1" } }
+          order_by: { price: asc }
+          limit: 1
+        ) {
+          bigmap_key
+          price
+          amount_left
+          marketplace_contract
+        }
+        open_edition_active {
+          price
+          start_time
+          end_time
         }
       }
     }
@@ -1634,6 +1663,64 @@ export async function getTokensByTag(
 }
 
 // Sales where a given wallet was the buyer (for /pnl cost-basis)
+
+// Batch lookup for a set of (fa, tokenId) pairs — used by /pin to hydrate
+// locally-pinned tokens into full TokenCards (thumbnail, listings, OE).
+
+const TOKENS_BY_PAIRS_QUERY = /* GraphQL */ `
+  query TokensByPairs($where: token_bool_exp!) {
+    token(where: $where, limit: 200) {
+      token_id
+      fa_contract
+      name
+      display_uri
+      thumbnail_uri
+      mime
+      supply
+      timestamp
+      fa {
+        name
+      }
+      creators {
+        holder {
+          address
+          alias
+        }
+      }
+      listings_active: listings(
+        where: { status: { _eq: "active" }, currency_id: { _eq: "1" } }
+        order_by: { price: asc }
+        limit: 1
+      ) {
+        bigmap_key
+        price
+        amount_left
+        marketplace_contract
+      }
+      open_edition_active {
+        price
+        start_time
+        end_time
+      }
+    }
+  }
+`;
+
+export async function getTokensByPairs(
+  pairs: Array<{ fa: string; tokenId: string }>,
+): Promise<LatestMintToken[]> {
+  if (pairs.length === 0) return [];
+  const where = {
+    _or: pairs.map((p) => ({
+      fa_contract: { _eq: p.fa },
+      token_id: { _eq: p.tokenId },
+    })),
+  };
+  const data = await objktQuery<{ token: LatestMintToken[] }>(TOKENS_BY_PAIRS_QUERY, {
+    where,
+  });
+  return data.token;
+}
 
 const SALES_BY_BUYER_QUERY = /* GraphQL */ `
   query SalesByBuyer($address: String!, $limit: Int!) {

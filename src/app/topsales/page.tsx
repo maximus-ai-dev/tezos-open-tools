@@ -2,6 +2,7 @@ import { getRecentSales } from "@/lib/objkt";
 import { PageShell } from "@/components/common/PageShell";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { TokenBuyFooter } from "@/components/common/TokenBuyFooter";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -65,9 +66,8 @@ export default async function TopSalesPage({ searchParams }: PageProps) {
                   artistAlias: creator?.alias ?? null,
                 }}
                 priceMutez={s.price_xtz ?? s.price}
-                marketplaceLabel={
-                  MARKETPLACE_NAMES[s.marketplace_contract] ?? "marketplace"
-                }
+                marketplaceLabel={`sold on ${MARKETPLACE_NAMES[s.marketplace_contract] ?? "marketplace"}`}
+                footer={s.token ? <TokenBuyFooter token={s.token} /> : null}
               />
             );
           })}

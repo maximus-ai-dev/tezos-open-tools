@@ -10,8 +10,12 @@ import {
   type PinnedToken,
   unpinToken,
 } from "@/lib/savedTokens";
-import { objktTokenLink } from "@/lib/constants";
+import { objktTokenLink, MARKETPLACE_NAMES } from "@/lib/constants";
 import { parseTokenInput } from "@/lib/utils";
+import { TokenGrid } from "@/components/common/TokenGrid";
+import { TokenCard } from "@/components/common/TokenCard";
+import { TokenBuyFooter } from "@/components/common/TokenBuyFooter";
+import type { LatestMintToken } from "@/lib/objkt";
 
 export default function PinPage() {
   const { address, status, connect } = useWallet();
@@ -19,6 +23,7 @@ export default function PinPage() {
   const [tokenInput, setTokenInput] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [tokens, setTokens] = useState<LatestMintToken[]>([]);
 
   useEffect(() => {
     if (!address) {
@@ -28,6 +33,29 @@ export default function PinPage() {
     }
     setPins(getPinnedTokens(address));
   }, [address]);
+
+  // Hydrate the pinned (fa, tokenId) pairs into full token data — thumbnails,
+  // current listings, OE info — so we can render TokenCards with inline buy.
+  useEffect(() => {
+    if (!pins || pins.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTokens([]);
+      return;
+    }
+    const param = pins.map((p) => `${p.fa}:${p.tokenId}`).join(",");
+    let cancelled = false;
+    fetch(`/api/tokens-by-pairs?pairs=${encodeURIComponent(param)}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { tokens: LatestMintToken[] }) => {
+        if (!cancelled) setTokens(d.tokens);
+      })
+      .catch(() => {
+        if (!cancelled) setTokens([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pins]);
 
   function add() {
     setParseError(null);
@@ -159,34 +187,82 @@ export default function PinPage() {
                 across the toolkit.
               </p>
             ) : (
-              <ul className="rounded-md border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-200 dark:divide-zinc-800">
-                {pins.map((t) => (
-                  <li
-                    key={`${t.fa}:${t.tokenId}`}
-                    className="px-3 py-2 flex items-center gap-3 text-sm"
-                  >
-                    <a
-                      href={objktTokenLink(t.fa, t.tokenId)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono text-xs text-blue-600 dark:text-blue-400 hover:underline truncate"
-                      title={`${t.fa}:${t.tokenId}`}
-                    >
-                      {t.fa.slice(0, 10)}…:{t.tokenId}
-                    </a>
-                    <span className="text-xs text-zinc-400 ml-auto whitespace-nowrap">
-                      pinned {new Date(t.pinnedAt).toLocaleDateString()}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => remove(t)}
-                      className="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                    >
-                      Unpin
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <TokenGrid>
+                  {pins.map((p) => {
+                    const t = tokens.find(
+                      (x) => x.fa_contract === p.fa && x.token_id === p.tokenId,
+                    );
+                    if (!t) {
+                      // Pre-hydrate placeholder — token data still loading or
+                      // the token has been removed from objkt.
+                      return (
+                        <article
+                          key={`${p.fa}:${p.tokenId}`}
+                          className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-3 text-xs"
+                        >
+                          <a
+                            href={objktTokenLink(p.fa, p.tokenId)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-mono text-blue-600 dark:text-blue-400 hover:underline break-all"
+                          >
+                            {p.fa.slice(0, 10)}…:{p.tokenId}
+                          </a>
+                          <div className="mt-2 flex items-center justify-between gap-2">
+                            <span className="text-zinc-400">
+                              pinned {new Date(p.pinnedAt).toLocaleDateString()}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => remove(p)}
+                              className="px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                            >
+                              Unpin
+                            </button>
+                          </div>
+                        </article>
+                      );
+                    }
+                    const listing = t.listings_active[0];
+                    return (
+                      <TokenCard
+                        key={`${t.fa_contract}:${t.token_id}`}
+                        token={{
+                          fa: t.fa_contract,
+                          tokenId: t.token_id,
+                          name: t.name,
+                          thumbnailUri: t.thumbnail_uri,
+                          displayUri: t.display_uri,
+                          artistAddress: t.creators?.[0]?.holder.address ?? null,
+                          artistAlias: t.creators?.[0]?.holder.alias ?? null,
+                          supply: t.supply,
+                        }}
+                        priceMutez={listing?.price ?? t.open_edition_active?.price ?? null}
+                        marketplaceLabel={
+                          listing
+                            ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace"
+                            : t.open_edition_active
+                              ? "open edition"
+                              : null
+                        }
+                        footer={
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <TokenBuyFooter token={t} />
+                            <button
+                              type="button"
+                              onClick={() => remove(p)}
+                              className="text-[11px] px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                            >
+                              Unpin
+                            </button>
+                          </div>
+                        }
+                      />
+                    );
+                  })}
+                </TokenGrid>
+              </>
             )}
           </section>
         </>
