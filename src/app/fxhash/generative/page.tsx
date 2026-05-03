@@ -3,6 +3,7 @@ import { PageShell } from "@/components/common/PageShell";
 import { WalletInputForm } from "@/components/common/WalletInputForm";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { TokenBuyFooter } from "@/components/common/TokenBuyFooter";
 import { MARKETPLACE_NAMES, objktCollectionLink, objktProfileLink } from "@/lib/constants";
 import { formatTez, ipfsToHttp, parseContractInput, shortAddress } from "@/lib/utils";
 
@@ -74,10 +75,15 @@ async function Project({ fa }: { fa: string }) {
                 artistAlias: creator?.alias ?? null,
                 supply: t.supply,
               }}
-              priceMutez={listing?.price ?? null}
+              priceMutez={listing?.price ?? t.open_edition_active?.price ?? null}
               marketplaceLabel={
-                listing ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace" : null
+                listing
+                  ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace"
+                  : t.open_edition_active
+                    ? "open edition"
+                    : null
               }
+              footer={<TokenBuyFooter token={t} />}
             />
           );
         })}

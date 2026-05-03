@@ -94,7 +94,9 @@ export interface HeldToken {
     fa: { name: string | null } | null;
     creators: Array<{ holder: { address: string; alias: string | null } }>;
     listings_active: Array<{
+      bigmap_key: number | null;
       price: number;
+      amount_left: number;
       seller_address: string;
       marketplace_contract: string;
     }>;
@@ -139,7 +141,9 @@ const HOLDINGS_QUERY = /* GraphQL */ `
             order_by: { price: asc }
             limit: 1
           ) {
+            bigmap_key
             price
+            amount_left
             seller_address
             marketplace_contract
           }

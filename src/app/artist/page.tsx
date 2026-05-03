@@ -3,6 +3,7 @@ import { PageShell } from "@/components/common/PageShell";
 import { WalletInputForm } from "@/components/common/WalletInputForm";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { TokenBuyFooter } from "@/components/common/TokenBuyFooter";
 import { WatchButton } from "@/components/common/WatchButton";
 import { MARKETPLACE_NAMES, objktProfileLink, objktTokenLink } from "@/lib/constants";
 import { formatDate, formatTez, ipfsToHttp, isTezosAddress, shortAddress } from "@/lib/utils";
@@ -206,11 +207,16 @@ async function ArtistSummary({ address }: { address: string }) {
                   artistAddress: address,
                   supply: t.supply,
                 }}
-                priceMutez={listing?.price ?? null}
+                priceMutez={listing?.price ?? t.open_edition_active?.price ?? null}
                 marketplaceLabel={
-                  listing ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace" : null
+                  listing
+                    ? MARKETPLACE_NAMES[listing.marketplace_contract] ?? "marketplace"
+                    : t.open_edition_active
+                      ? "open edition"
+                      : null
                 }
                 badge={t.supply !== null ? `ed ${t.supply}` : null}
+                footer={<TokenBuyFooter token={t} />}
               />
             );
           })}

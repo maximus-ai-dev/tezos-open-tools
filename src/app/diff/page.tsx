@@ -4,6 +4,7 @@ import type { HeldToken } from "@/lib/objkt";
 import { PageShell } from "@/components/common/PageShell";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
+import { TokenBuyFooter } from "@/components/common/TokenBuyFooter";
 import { isTezosAddress, shortAddress } from "@/lib/utils";
 import { objktProfileLink } from "@/lib/constants";
 
@@ -162,6 +163,7 @@ async function Diff({ a, b }: { a: string; b: string }) {
                   supply: h.token.supply,
                 }}
                 priceMutez={h.token.listings_active[0]?.price ?? null}
+                footer={<TokenBuyFooter token={h.token} />}
               />
             ))}
           </TokenGrid>

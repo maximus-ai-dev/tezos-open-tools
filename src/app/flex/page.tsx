@@ -4,6 +4,7 @@ import { WalletInputForm } from "@/components/common/WalletInputForm";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
 import { PinButton } from "@/components/common/PinButton";
+import { TokenBuyFooter } from "@/components/common/TokenBuyFooter";
 import { decodePinsParam } from "@/lib/pinFormat";
 import { isTezosAddress, shortAddress } from "@/lib/utils";
 import type { HoldingsResult } from "@/lib/objkt";
@@ -144,7 +145,10 @@ async function Flex({
               }}
               badge={badge}
               footer={
-                <PinButton fa={h.token.fa_contract} tokenId={h.token.token_id} />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <TokenBuyFooter token={h.token} />
+                  <PinButton fa={h.token.fa_contract} tokenId={h.token.token_id} />
+                </div>
               }
             />
           );

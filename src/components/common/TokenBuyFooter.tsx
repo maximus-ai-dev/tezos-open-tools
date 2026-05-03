@@ -12,7 +12,7 @@ interface TokenBuyFooterProps {
       amount_left: number;
       marketplace_contract: string;
     }>;
-    open_edition_active: {
+    open_edition_active?: {
       price: number;
       start_time: string | null;
       end_time: string | null;
