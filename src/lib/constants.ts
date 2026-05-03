@@ -1,7 +1,10 @@
-export const REFERRAL_WALLET = "tz1cEVvuLSWGqLAQ5QTTLdKA56PyAYmiCDy7";
+// Receives the on-chain referral fee that objkt routes back to whoever sends
+// a `fulfill_ask` with `referrers: { ADDR: 10000 }`. Forks: change to your own.
+export const REFERRAL_WALLET = "tz1PQrfjBqZisnqZ36XvNv252mrVMZdJUzAK";
 
-// Tip-jar address for /donate. Forks: change this to your own address.
-export const DONATION_WALLET = REFERRAL_WALLET;
+// Tip-jar address for /donate. Distinct from REFERRAL_WALLET so the two
+// revenue paths can route to different wallets if needed.
+export const DONATION_WALLET = "tz1cEVvuLSWGqLAQ5QTTLdKA56PyAYmiCDy7";
 
 // Project metadata — update these when you fork / rehost.
 export const PROJECT_NAME = "Tezos Open Tools";
