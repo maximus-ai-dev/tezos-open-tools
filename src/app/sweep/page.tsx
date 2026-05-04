@@ -3,17 +3,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { buildBulkBuy, sendBatch } from "@/lib/tezos/operations";
-import { objktTokenLink } from "@/lib/constants";
-import { formatTez, ipfsToHttp, parseContractInput } from "@/lib/utils";
+import { buildBulkBuy, isBuyable, sendBatch } from "@/lib/tezos/operations";
+import { MARKETPLACE_NAMES, objktTokenLink } from "@/lib/constants";
+import { formatTez, ipfsToHttp, parseContractInput, parseTokenInput } from "@/lib/utils";
 import type { FloorListing } from "@/lib/objkt";
-
-const OBJKT_V62 = "KT1SwbTqhSKF6Pdokiu1K4Fpi17ahPPzmt1X";
 
 export default function SweepPage() {
   const { address, status, connect } = useWallet();
   const [faInput, setFaInput] = useState("");
   const [fa, setFa] = useState<string | null>(null);
+  // Optional tokenId — when set, we only load listings for that exact (fa, tokenId)
+  // pair instead of the contract floor. Useful for buying multiple editions of
+  // one specific token across many sellers.
+  const [tokenId, setTokenId] = useState<string | null>(null);
   const [listings, setListings] = useState<FloorListing[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -23,12 +25,21 @@ export default function SweepPage() {
 
   function load() {
     setResult(null);
+    // Try parsing as a full token ref first (objkt URL or KT1...:tokenId).
+    const tokenParsed = parseTokenInput(faInput);
+    if (tokenParsed) {
+      setFa(tokenParsed.fa);
+      setTokenId(tokenParsed.tokenId);
+      return;
+    }
+    // Fall back to a bare contract — sweep the contract's floor.
     const parsed = parseContractInput(faInput);
     if (!parsed) {
-      setResult({ ok: false, message: "Couldn't parse a contract address." });
+      setResult({ ok: false, message: "Couldn't parse a contract address or token URL." });
       return;
     }
     setFa(parsed);
+    setTokenId(null);
   }
 
   useEffect(() => {
@@ -36,13 +47,16 @@ export default function SweepPage() {
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    fetch(`/api/floor?fa=${fa}&limit=60`, { cache: "no-store" })
+    const url = tokenId
+      ? `/api/floor?fa=${fa}&tokenId=${tokenId}&limit=60`
+      : `/api/floor?fa=${fa}&limit=60`;
+    fetch(url, { cache: "no-store" })
       .then((r) => r.json())
       .then((d: { listings: FloorListing[] }) => {
         if (cancelled) return;
-        // Bulk-buy only works on objkt v6.2 — filter the rest out.
+        // Allow any marketplace we have a buy handler for.
         const supported = d.listings.filter(
-          (l) => l.marketplace_contract === OBJKT_V62 && l.bigmap_key !== null,
+          (l) => l.bigmap_key !== null && isBuyable(l.marketplace_contract),
         );
         setListings(supported);
       })
@@ -55,7 +69,7 @@ export default function SweepPage() {
     return () => {
       cancelled = true;
     };
-  }, [fa]);
+  }, [fa, tokenId]);
 
   function toggle(id: string) {
     setSelected((s) => {
@@ -89,6 +103,7 @@ export default function SweepPage() {
       const ops = await buildBulkBuy(
         address,
         selectedListings.map((l) => ({
+          marketplaceContract: l.marketplace_contract,
           askId: l.bigmap_key as number,
           amount: 1,
           priceMutez: l.price,
@@ -113,14 +128,15 @@ export default function SweepPage() {
       <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Floor Sweep</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Buy multiple cheap listings in one signed transaction. Targets objkt v6.2&apos;s{" "}
-          <code className="text-xs font-mono">fulfill_ask_bulk</code> entrypoint — N asks resolved
-          atomically (or partially, if the marketplace allows).
+          Buy multiple cheap listings in one signed transaction. Works across objkt v4 / v6 /
+          v6.1 / v6.2, HEN v1 / v2, and Teia. objkt v6.2 listings are coalesced into one
+          {" "}<code className="text-xs font-mono">fulfill_ask_bulk</code> op; everything else is
+          batched as individual <code className="text-xs font-mono">fulfill_ask</code> /
+          {" "}<code className="text-xs font-mono">collect</code> ops in the same signed batch.
         </p>
         <p className="mt-2 text-xs text-zinc-500">
-          Listings on other marketplaces (HEN, Teia, fxhash, Versum) are filtered out of the sweep
-          set — they don&apos;t expose a bulk-buy entrypoint, so you&apos;d have to use individual
-          Buy buttons on those.
+          Paste a contract for the collection floor, or a full token URL / KT1…:tokenId to load
+          listings for that specific token only (multi-edition tokens have many sellers).
         </p>
       </header>
 
@@ -130,7 +146,7 @@ export default function SweepPage() {
           value={faInput}
           onChange={(e) => setFaInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && load()}
-          placeholder="KT1... contract or objkt collection URL"
+          placeholder="KT1...  or  KT1...:tokenId  or  objkt URL"
           className="flex-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm font-mono"
         />
         <button
@@ -142,15 +158,33 @@ export default function SweepPage() {
         </button>
       </div>
 
+      {fa && tokenId && (
+        <p className="mb-4 text-xs text-zinc-500">
+          Loading listings for <span className="font-mono">{fa.slice(0, 10)}…:{tokenId}</span>{" "}
+          only.{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setTokenId(null);
+              setSelected(new Set());
+            }}
+            className="underline hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            Clear → load whole contract floor
+          </button>
+        </p>
+      )}
+
       {!address ? (
         <ConnectPrompt status={status} connect={connect} />
       ) : !fa ? (
-        <p className="text-sm text-zinc-500">Paste a collection contract above to load floor listings.</p>
+        <p className="text-sm text-zinc-500">Paste a collection contract or token reference above to load listings.</p>
       ) : loading ? (
         <p className="text-sm text-zinc-500">Loading listings…</p>
       ) : !listings || listings.length === 0 ? (
         <p className="text-sm text-zinc-500">
-          No active objkt v6.2 listings on this contract.
+          No sweepable listings — no active XTZ-denominated listings on a supported marketplace
+          (objkt, HEN, Teia).
         </p>
       ) : (
         <>
@@ -216,7 +250,12 @@ export default function SweepPage() {
                   </div>
                   <div className="p-2 text-xs">
                     <div className="font-medium truncate">{tok.name ?? `#${tok.token_id}`}</div>
-                    <div className="text-zinc-500">{formatTez(l.price)}</div>
+                    <div className="flex items-center justify-between gap-1 text-zinc-500">
+                      <span>{formatTez(l.price)}</span>
+                      <span className="text-[10px]">
+                        {MARKETPLACE_NAMES[l.marketplace_contract] ?? "marketplace"}
+                      </span>
+                    </div>
                   </div>
                 </button>
               );

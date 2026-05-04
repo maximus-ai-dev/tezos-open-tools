@@ -1509,14 +1509,9 @@ export interface FloorListing {
 }
 
 const FLOOR_QUERY = /* GraphQL */ `
-  query Floor($fa: String!, $limit: Int!) {
+  query Floor($where: listing_bool_exp!, $limit: Int!) {
     listing(
-      where: {
-        fa_contract: { _eq: $fa }
-        status: { _eq: "active" }
-        currency_id: { _eq: "1" }
-        amount_left: { _gt: 0 }
-      }
+      where: $where
       order_by: { price: asc }
       limit: $limit
     ) {
@@ -1546,11 +1541,25 @@ const FLOOR_QUERY = /* GraphQL */ `
 
 export async function getFaFloor(
   fa: string,
-  opts: { limit?: number } = {},
+  opts: { limit?: number; tokenId?: string } = {},
 ): Promise<FloorListing[]> {
-  const { limit = 60 } = opts;
+  const { limit = 60, tokenId } = opts;
+  // Build where clause inline: optionally narrow to a specific token (when the
+  // user pasted KT1...:tokenId or an objkt URL with a tokenId).
+  const where: Record<string, unknown> = {
+    fa_contract: { _eq: fa },
+    status: { _eq: "active" },
+    currency_id: { _eq: "1" },
+    amount_left: { _gt: 0 },
+    // objkt v4 sometimes leaves expired listings as status=active with price=-1.
+    // Excluding them keeps the sweep set sane.
+    price: { _gt: 0 },
+  };
+  if (tokenId) {
+    where.token = { token_id: { _eq: tokenId } };
+  }
   const data = await objktQuery<{ listing: FloorListing[] }>(FLOOR_QUERY, {
-    fa,
+    where,
     limit,
   });
   return data.listing;

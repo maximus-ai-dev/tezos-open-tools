@@ -9,6 +9,8 @@ export async function GET(request: Request) {
   const fa = url.searchParams.get("fa") ?? "";
   if (!isContractAddress(fa)) return NextResponse.json({ listings: [] });
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 60), 200);
-  const listings = await getFaFloor(fa, { limit }).catch(() => []);
+  const tokenIdRaw = url.searchParams.get("tokenId");
+  const tokenId = tokenIdRaw && /^\d+$/.test(tokenIdRaw) ? tokenIdRaw : undefined;
+  const listings = await getFaFloor(fa, { limit, tokenId }).catch(() => []);
   return NextResponse.json({ listings });
 }

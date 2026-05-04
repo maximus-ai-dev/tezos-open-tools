@@ -458,20 +458,28 @@ export interface BuyAsk {
 }
 
 /** Per-marketplace entrypoint shape used by buildBuyBatch. */
-type BuyHandler = "fulfill_ask" | "collect_swap";
+type BuyHandler =
+  /** objkt v6+: fulfill_ask({ ask_id, amount, proxy_for, condition_extra, referrers }) */
+  | "fulfill_ask"
+  /** objkt v4: fulfill_ask({ ask_id, proxy?: address }) — no amount, no referrers */
+  | "fulfill_ask_v4"
+  /** HEN v2 / Teia: collect(swap_id: nat) — bare nat */
+  | "collect_swap"
+  /** HEN v1: collect({ objkt_amount: nat, swap_id: nat }) */
+  | "collect_swap_v1";
 
 const BUY_HANDLERS: Readonly<Record<string, BuyHandler>> = {
   // objkt v6+ — fulfill_ask(ask_id, amount, proxy_for, condition_extra, referrers).
-  // v1 (KT1FvqJw…) and v4 (KT1WvzYH…) have *different* fulfill_ask signatures
-  // (single nat / no amount+referrers respectively) — calling the v6 shape on
-  // them errors out at signing. Those listings fall back to "Buy on objkt ↗"
-  // until per-version dispatchers are added.
   "KT1CePTyk6fk4cFr6fasY5YXPGks6ttjSLp4": "fulfill_ask", // objkt v6
   "KT1Xjap1TwmDR1d8yEd8ErkraAj2mbdMrPZY": "fulfill_ask", // objkt v6.1
   "KT1SwbTqhSKF6Pdokiu1K4Fpi17ahPPzmt1X": "fulfill_ask", // objkt v6.2
+  // objkt v4 — minimal fulfill_ask({ ask_id, proxy? }), no referrer support.
+  "KT1WvzYHCNBvDSdwafTHv7nJ1dWmZ8GCYuuC": "fulfill_ask_v4", // objkt v4
   // HEN v2 + Teia (Teia is a HEN fork) — collect(swap_id: nat). No referrer field.
   "KT1HbQepzV1nVGg8QVznG7z4RcHseD5kwqBn": "collect_swap", // HEN v2
   "KT1PHubm9HtyQEJ4BBpMTVomq6mhbfNZ9z5w": "collect_swap", // Teia
+  // HEN v1 — collect({ objkt_amount: nat, swap_id: nat }).
+  "KT1Hkg5qeNhfwpKW4fXvq7HGZB9z2EnmCCA9": "collect_swap_v1", // HEN v1
 };
 
 export function isBuyable(marketplaceContract: string): boolean {
@@ -481,46 +489,53 @@ export function isBuyable(marketplaceContract: string): boolean {
 // Bulk buy on objkt v6.2 via fulfill_ask_bulk — N listings in one signed op.
 const OBJKT_V62_FOR_BULK = "KT1SwbTqhSKF6Pdokiu1K4Fpi17ahPPzmt1X";
 
-export interface BulkBuyAsk {
-  askId: number;
-  amount: number;
-  priceMutez: number;
-}
-
+/** Sweep mixed-marketplace asks in a single signed batch.
+ *  - objkt v6.2 asks are coalesced into one `fulfill_ask_bulk` op (efficient).
+ *  - All other marketplaces (objkt v6/v6.1/v4, HEN v1/v2, Teia) issue
+ *    individual ops via buildBuyBatch — wallet still signs them as one batch. */
 export async function buildBulkBuy(
   buyerAddress: string,
-  asks: BulkBuyAsk[],
-  /** atomic=true means all-or-nothing; false allows partial fills if listings get sniped mid-tx. */
+  buys: BuyAsk[],
+  /** atomic=true means all-or-nothing for the v6.2 bulk op; non-v6.2 ops are
+   *  always non-atomic (they're separate operations in the same batch). */
   atomic = false,
 ): Promise<WalletParamsWithKind[]> {
-  if (asks.length === 0) return [];
-  if (asks.length === 1) {
-    return buildBuyBatch(buyerAddress, [
-      {
-        marketplaceContract: OBJKT_V62_FOR_BULK,
-        askId: asks[0].askId,
-        amount: asks[0].amount,
-        priceMutez: asks[0].priceMutez,
-      },
-    ]);
+  if (buys.length === 0) return [];
+
+  // Split: v6.2 → coalesce; everything else → individual ops via buildBuyBatch.
+  const v62Asks = buys.filter((b) => b.marketplaceContract === OBJKT_V62_FOR_BULK);
+  const otherBuys = buys.filter((b) => b.marketplaceContract !== OBJKT_V62_FOR_BULK);
+
+  const ops: WalletParamsWithKind[] = [];
+
+  if (v62Asks.length === 1) {
+    // Single v6.2 ask isn't worth the bulk wrapper.
+    ops.push(...(await buildBuyBatch(buyerAddress, v62Asks)));
+  } else if (v62Asks.length > 1) {
+    const tezos = getTezos();
+    const { REFERRAL_WALLET } = await import("@/lib/constants");
+    const total = v62Asks.reduce((s, a) => s + a.priceMutez * a.amount, 0);
+    const asksMap: Record<string, { amount: number; condition_extra: null }> = {};
+    for (const a of v62Asks) {
+      asksMap[String(a.askId)] = { amount: a.amount, condition_extra: null };
+    }
+    const mkt = await tezos.wallet.at(OBJKT_V62_FOR_BULK);
+    const params = mkt.methodsObject
+      .fulfill_ask_bulk({
+        asks: asksMap,
+        atomic,
+        proxy_for: buyerAddress,
+        referrers: { [REFERRAL_WALLET]: 10000 },
+      })
+      .toTransferParams({ amount: total, mutez: true });
+    ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
   }
-  const tezos = getTezos();
-  const { REFERRAL_WALLET } = await import("@/lib/constants");
-  const total = asks.reduce((s, a) => s + a.priceMutez * a.amount, 0);
-  const asksMap: Record<string, { amount: number; condition_extra: null }> = {};
-  for (const a of asks) {
-    asksMap[String(a.askId)] = { amount: a.amount, condition_extra: null };
+
+  if (otherBuys.length > 0) {
+    ops.push(...(await buildBuyBatch(buyerAddress, otherBuys)));
   }
-  const mkt = await tezos.wallet.at(OBJKT_V62_FOR_BULK);
-  const params = mkt.methodsObject
-    .fulfill_ask_bulk({
-      asks: asksMap,
-      atomic,
-      proxy_for: buyerAddress,
-      referrers: { [REFERRAL_WALLET]: 10000 },
-    })
-    .toTransferParams({ amount: total, mutez: true });
-  return [{ kind: "transaction" as const, ...params } as WalletParamsWithKind];
+
+  return ops;
 }
 
 export async function buildBuyBatch(
@@ -551,17 +566,30 @@ export async function buildBuyBatch(
         })
         .toTransferParams({ amount: totalMutez, mutez: true });
       ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
-    } else {
-      // collect_swap — HEN v2 / Teia: collect(swap_id : nat). The contract
-      // doesn't have a multi-edition arg or a referrer field, so we issue one
-      // op per edition and the marketplace deployment forfeits the referral
-      // bonus for these listings.
+    } else if (handler === "fulfill_ask_v4") {
+      // objkt v4: minimal `fulfill_ask({ ask_id, proxy? })`. No amount field
+      // (one edition per call) and no referrer support. Issue one op per edition.
+      for (let i = 0; i < b.amount; i++) {
+        const params = mkt.methodsObject
+          .fulfill_ask({ ask_id: b.askId, proxy: buyerAddress })
+          .toTransferParams({ amount: b.priceMutez, mutez: true });
+        ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
+      }
+    } else if (handler === "collect_swap") {
+      // HEN v2 / Teia: collect(swap_id : nat). One op per edition.
       for (let i = 0; i < b.amount; i++) {
         const params = mkt.methodsObject
           .collect(b.askId)
           .toTransferParams({ amount: b.priceMutez, mutez: true });
         ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
       }
+    } else {
+      // HEN v1: collect({ objkt_amount: nat, swap_id: nat }). objkt_amount is
+      // editions per call — we can use it directly instead of looping.
+      const params = mkt.methodsObject
+        .collect({ objkt_amount: b.amount, swap_id: b.askId })
+        .toTransferParams({ amount: totalMutez, mutez: true });
+      ops.push({ kind: "transaction" as const, ...params } as WalletParamsWithKind);
     }
   }
   return ops;
