@@ -1652,9 +1652,10 @@ const TOKENS_BY_TAG_QUERY = /* GraphQL */ `
 `;
 
 /** Pass one or more tag names — tokens matching ANY of them are returned (OR).
- *  Matching is case-insensitive (matches "ProofOfPalm2026" when given
- *  "proofofpalm2026") to mirror objkt's own search behavior — artists tag
- *  inconsistently, and a strict _eq filter undercounts the campaign. */
+ *  Matching is case-insensitive AND auto-expands each tag with/without a "#"
+ *  prefix variant: artists tag inconsistently, and objkt's own search strips
+ *  leading "#" while ours used to be strict. So `proofofpalm` also picks up
+ *  `#proofofpalm`, `ProofOfPalm`, etc. */
 export async function getTokensByTag(
   tag: string | string[],
   opts: { since?: string; until?: string; limit?: number } = {},
@@ -1662,8 +1663,19 @@ export async function getTokensByTag(
   const { since, until, limit = 60 } = opts;
   const tags = Array.isArray(tag) ? tag : [tag];
   if (tags.length === 0) return [];
+
+  // For each tag, build both bare and hash-prefixed case-insensitive variants.
+  const variants = new Set<string>();
+  for (const t of tags) {
+    const bare = t.startsWith("#") ? t.slice(1) : t;
+    variants.add(bare);
+    variants.add(`#${bare}`);
+  }
+
   const where: Record<string, unknown> = {
-    _or: tags.map((t) => ({ tags: { tag: { name: { _ilike: t } } } })),
+    _or: [...variants].map((v) => ({ tags: { tag: { name: { _ilike: v } } } })),
+    // Exclude burned tokens — they pollute event-contribution counts.
+    supply: { _gt: 0 },
     timestamp: {
       _gte: since ?? "1970-01-01T00:00:00Z",
       _lte: until ?? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
