@@ -1664,12 +1664,16 @@ export async function getTokensByTag(
   const tags = Array.isArray(tag) ? tag : [tag];
   if (tags.length === 0) return [];
 
-  // For each tag, build both bare and hash-prefixed case-insensitive variants.
+  // Auto-expand each tag into prefix-match variants so we catch artist-coined
+  // suffixes like `proofofpalm_mederu`, abbreviations like `proofofpalm26`,
+  // and hash-prefixed forms `#proofofpalm*` that objkt strips in display.
+  // Prefix-match (not full substring) keeps the search specific — searching
+  // "proofofpalm" still won't match "napalm" or "palmtree".
   const variants = new Set<string>();
   for (const t of tags) {
     const bare = t.startsWith("#") ? t.slice(1) : t;
-    variants.add(bare);
-    variants.add(`#${bare}`);
+    variants.add(`${bare}%`);
+    variants.add(`#${bare}%`);
   }
 
   const where: Record<string, unknown> = {
