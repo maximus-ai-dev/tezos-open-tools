@@ -1667,21 +1667,30 @@ export async function getTokensByTag(
   // Auto-expand each tag into prefix-match variants so we catch artist-coined
   // suffixes like `proofofpalm_mederu`, abbreviations like `proofofpalm26`,
   // and hash-prefixed forms `#proofofpalm*` that objkt strips in display.
-  // Prefix-match (not full substring) keeps the search specific — searching
-  // "proofofpalm" still won't match "napalm" or "palmtree".
-  const variants = new Set<string>();
+  // Prefix-match (not full substring) on tag names keeps the search specific —
+  // searching "proofofpalm" still won't match "napalm" or "palmtree".
+  const tagVariants = new Set<string>();
+  // Description matches use substring ilike since the tag is embedded in
+  // free text (e.g. "AI contribution to #ProofofPalm #ProofofPalm2026").
+  const descVariants = new Set<string>();
   for (const t of tags) {
     const bare = t.startsWith("#") ? t.slice(1) : t;
-    variants.add(`${bare}%`);
-    variants.add(`#${bare}%`);
+    tagVariants.add(`${bare}%`);
+    tagVariants.add(`#${bare}%`);
+    descVariants.add(`%${bare}%`);
   }
 
   const where: Record<string, unknown> = {
-    _or: [...variants].map((v) => ({ tags: { tag: { name: { _ilike: v } } } })),
-    // Don't filter by supply — objkt's tag pages include burned contributions
-    // (an artist who entered an event and later burned their piece still
-    // counts as having contributed). Matching that behavior keeps counts
-    // consistent with objkt's UI.
+    _or: [
+      ...[...tagVariants].map((v) => ({ tags: { tag: { name: { _ilike: v } } } })),
+      // objkt searches descriptions too — some artists declare event entry in
+      // description text rather than tags (e.g. "AI contribution to
+      // #ProofofPalm #ProofofPalm2026"). Match those.
+      ...[...descVariants].map((v) => ({ description: { _ilike: v } })),
+    ],
+    // Exclude burned tokens — matching objkt's UI count which only displays
+    // active mints in tag search results.
+    supply: { _gt: 0 },
     timestamp: {
       _gte: since ?? "1970-01-01T00:00:00Z",
       _lte: until ?? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
