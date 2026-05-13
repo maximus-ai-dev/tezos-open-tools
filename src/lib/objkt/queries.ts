@@ -1678,8 +1678,10 @@ export async function getTokensByTag(
 
   const where: Record<string, unknown> = {
     _or: [...variants].map((v) => ({ tags: { tag: { name: { _ilike: v } } } })),
-    // Exclude burned tokens — they pollute event-contribution counts.
-    supply: { _gt: 0 },
+    // Don't filter by supply — objkt's tag pages include burned contributions
+    // (an artist who entered an event and later burned their piece still
+    // counts as having contributed). Matching that behavior keeps counts
+    // consistent with objkt's UI.
     timestamp: {
       _gte: since ?? "1970-01-01T00:00:00Z",
       _lte: until ?? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
