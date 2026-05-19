@@ -8,7 +8,6 @@ import { TokenBuyFooter } from "@/components/common/TokenBuyFooter";
 import { MARKETPLACE_NAMES } from "@/lib/constants";
 
 interface LiveTagFeedProps {
-  initial: LatestMintToken[];
   /** One or more tag names — tokens matching ANY are surfaced (OR). */
   tags: string[];
   since?: string;
@@ -25,7 +24,6 @@ function tokenKey(t: LatestMintToken): string {
 }
 
 export function LiveTagFeed({
-  initial,
   tags,
   since,
   until,
@@ -33,7 +31,8 @@ export function LiveTagFeed({
   pollMs = 12_000,
   maxKeep = 200,
 }: LiveTagFeedProps) {
-  const [tokens, setTokens] = useState<LatestMintToken[]>(initial);
+  const [tokens, setTokens] = useState<LatestMintToken[]>([]);
+  const [loading, setLoading] = useState(true);
   const [errored, setErrored] = useState(false);
   const [paused, setPaused] = useState(!livePollEnabled);
   const [newKeys, setNewKeys] = useState<Set<string>>(() => new Set());
@@ -42,7 +41,9 @@ export function LiveTagFeed({
   const status: "live" | "paused" | "error" = paused ? "paused" : errored ? "error" : "live";
 
   const tagParam = tags.join(",");
-  const refresh = useCallback(async () => {
+
+  /** Fetch the current token set from the API. Returns null on failure. */
+  const fetchTokens = useCallback(async (): Promise<LatestMintToken[] | null> => {
     try {
       const params = new URLSearchParams({ tag: tagParam });
       if (since) params.set("since", since);
@@ -50,9 +51,43 @@ export function LiveTagFeed({
       const res = await fetch(`/api/tag-feed?${params}`, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = (await res.json()) as { tokens: LatestMintToken[] };
+      return json.tokens;
+    } catch {
+      return null;
+    }
+  }, [tagParam, since, until]);
+
+  // Initial load — fires immediately on mount. `loading` already starts true.
+  useEffect(() => {
+    let cancelled = false;
+    fetchTokens().then((t) => {
+      if (cancelled) return;
+      if (t) {
+        setTokens(t);
+        setErrored(false);
+      } else {
+        setErrored(true);
+      }
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchTokens]);
+
+  // Poll for new mints — prepends fresh tokens with a NEW badge.
+  useEffect(() => {
+    if (paused || !livePollEnabled) return;
+    const id = setInterval(async () => {
+      const fetched = await fetchTokens();
+      if (!fetched) {
+        setErrored(true);
+        return;
+      }
+      setErrored(false);
       setTokens((prev) => {
         const seen = new Set(prev.map(tokenKey));
-        const fresh = json.tokens.filter((t) => !seen.has(tokenKey(t)));
+        const fresh = fetched.filter((t) => !seen.has(tokenKey(t)));
         if (fresh.length === 0) return prev;
         setNewKeys((prevKeys) => {
           const next = new Set(prevKeys);
@@ -61,17 +96,9 @@ export function LiveTagFeed({
         });
         return [...fresh, ...prev].slice(0, maxKeep);
       });
-      setErrored(false);
-    } catch {
-      setErrored(true);
-    }
-  }, [tagParam, since, until, maxKeep]);
-
-  useEffect(() => {
-    if (paused || !livePollEnabled) return;
-    const id = setInterval(refresh, pollMs);
+    }, pollMs);
     return () => clearInterval(id);
-  }, [paused, pollMs, refresh, livePollEnabled]);
+  }, [paused, pollMs, fetchTokens, livePollEnabled, maxKeep]);
 
   function clearNewBadges() {
     setNewKeys(new Set());
@@ -118,8 +145,21 @@ export function LiveTagFeed({
         </div>
       )}
 
-      {tokens.length === 0 ? (
-        <p className="text-sm text-zinc-500">No tokens with this tag in the selected window.</p>
+      {!loading && tokens.length > 0 && (
+        <p className="mb-4 text-xs text-zinc-500">
+          {tokens.length} token{tokens.length === 1 ? "" : "s"}
+          {tokens.length >= maxKeep && ` (showing first ${maxKeep})`}
+        </p>
+      )}
+
+      {loading ? (
+        <p className="text-sm text-zinc-500">Loading tokens… (tag search can take a few seconds)</p>
+      ) : tokens.length === 0 ? (
+        <p className="text-sm text-zinc-500">
+          {errored
+            ? "Couldn't load tokens — retrying on the next poll."
+            : "No tokens with this tag in the selected window."}
+        </p>
       ) : (
         <TokenGrid>
           {tokens.map((t) => {

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { getTokensByTag } from "@/lib/objkt";
 import { PageShell } from "@/components/common/PageShell";
 import { LiveTagFeed } from "@/components/common/LiveTagFeed";
 
@@ -57,12 +56,10 @@ export default async function TagDetailPage({ params, searchParams }: PageProps)
   const effectiveSince = since ?? active.since;
   const effectiveUntil = until ?? active.until;
 
-  const tokens = await getTokensByTag(tags, {
-    since: effectiveSince,
-    until: effectiveUntil,
-    limit: 96,
-  }).catch(() => []);
-
+  // The tag query is slow (~4-5s — leading-wildcard description scan on objkt's
+  // side). We deliberately do NOT block the server render on it; the page
+  // shell ships instantly and LiveTagFeed fetches client-side with its own
+  // "Loading…" state. Blocking here gave users a multi-second blank screen.
   const headerLabel = tags.map((t) => `#${t}`).join(" or ");
 
   return (
@@ -100,14 +97,8 @@ export default async function TagDetailPage({ params, searchParams }: PageProps)
         </Link>
       </div>
 
-      <p className="mb-4 text-xs text-zinc-500">
-        {tokens.length} token{tokens.length === 1 ? "" : "s"}
-        {tokens.length === 96 && " (showing first 96 — increase the time window narrower if you want fewer)"}
-      </p>
-
       <LiveTagFeed
         tags={tags}
-        initial={tokens}
         since={effectiveSince}
         until={effectiveUntil}
         livePollEnabled={windowIncludesNow(effectiveUntil)}
