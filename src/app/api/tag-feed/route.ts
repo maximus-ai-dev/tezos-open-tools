@@ -14,6 +14,8 @@ export async function GET(request: Request) {
     .map((t) => t.trim())
     .filter(Boolean);
   if (tags.length === 0) return NextResponse.json({ tokens: [] });
-  const tokens = await getTokensByTag(tags, { since, until, limit: 60 }).catch(() => []);
+  // limit 96 (not 60) so client-side sorting on the tag page covers the whole
+  // set for a typical campaign tag rather than just the 60 newest.
+  const tokens = await getTokensByTag(tags, { since, until, limit: 96 }).catch(() => []);
   return NextResponse.json({ tokens });
 }

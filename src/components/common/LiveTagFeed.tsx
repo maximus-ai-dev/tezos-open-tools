@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { LatestMintToken } from "@/lib/objkt";
 import { TokenGrid } from "@/components/common/TokenGrid";
 import { TokenCard } from "@/components/common/TokenCard";
@@ -23,6 +23,48 @@ function tokenKey(t: LatestMintToken): string {
   return `${t.fa_contract}:${t.token_id}`;
 }
 
+type SortKey = "newest" | "oldest" | "price-low" | "price-high";
+
+const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
+  { key: "newest", label: "Newest" },
+  { key: "oldest", label: "Oldest" },
+  { key: "price-low", label: "Price ↑" },
+  { key: "price-high", label: "Price ↓" },
+];
+
+/** Cheapest current price for a token (regular listing or open edition), or
+ *  null if it isn't for sale. */
+function tokenPrice(t: LatestMintToken): number | null {
+  return t.listings_active?.[0]?.price ?? t.open_edition_active?.price ?? null;
+}
+
+function sortTokens(tokens: LatestMintToken[], sort: SortKey): LatestMintToken[] {
+  const sorted = [...tokens];
+  switch (sort) {
+    case "newest":
+      sorted.sort((a, b) => (b.timestamp ?? "").localeCompare(a.timestamp ?? ""));
+      break;
+    case "oldest":
+      sorted.sort((a, b) => (a.timestamp ?? "").localeCompare(b.timestamp ?? ""));
+      break;
+    case "price-low":
+    case "price-high": {
+      const dir = sort === "price-low" ? 1 : -1;
+      sorted.sort((a, b) => {
+        const pa = tokenPrice(a);
+        const pb = tokenPrice(b);
+        // Unpriced tokens always sort last regardless of direction.
+        if (pa === null && pb === null) return 0;
+        if (pa === null) return 1;
+        if (pb === null) return -1;
+        return (pa - pb) * dir;
+      });
+      break;
+    }
+  }
+  return sorted;
+}
+
 export function LiveTagFeed({
   tags,
   since,
@@ -36,9 +78,14 @@ export function LiveTagFeed({
   const [errored, setErrored] = useState(false);
   const [paused, setPaused] = useState(!livePollEnabled);
   const [newKeys, setNewKeys] = useState<Set<string>>(() => new Set());
+  const [sort, setSort] = useState<SortKey>("newest");
   const newCount = newKeys.size;
 
   const status: "live" | "paused" | "error" = paused ? "paused" : errored ? "error" : "live";
+
+  // `tokens` is kept in arrival order (newest mints prepended by polling);
+  // the displayed list is a sorted view so the NEW-badge logic stays simple.
+  const displayed = useMemo(() => sortTokens(tokens, sort), [tokens, sort]);
 
   const tagParam = tags.join(",");
 
@@ -146,10 +193,29 @@ export function LiveTagFeed({
       )}
 
       {!loading && tokens.length > 0 && (
-        <p className="mb-4 text-xs text-zinc-500">
-          {tokens.length} token{tokens.length === 1 ? "" : "s"}
-          {tokens.length >= maxKeep && ` (showing first ${maxKeep})`}
-        </p>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-zinc-500">
+            {tokens.length} token{tokens.length === 1 ? "" : "s"}
+            {tokens.length >= maxKeep && ` (showing first ${maxKeep})`}
+          </p>
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-zinc-500 mr-1">Sort:</span>
+            {SORT_OPTIONS.map((o) => (
+              <button
+                key={o.key}
+                type="button"
+                onClick={() => setSort(o.key)}
+                className={`px-2 py-1 rounded border ${
+                  sort === o.key
+                    ? "border-zinc-900 dark:border-zinc-100 bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900"
+                    : "border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {loading ? (
@@ -162,7 +228,7 @@ export function LiveTagFeed({
         </p>
       ) : (
         <TokenGrid>
-          {tokens.map((t) => {
+          {displayed.map((t) => {
             const listing = t.listings_active[0];
             const creator = t.creators?.[0]?.holder;
             const isNew = newKeys.has(tokenKey(t));
