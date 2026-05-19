@@ -1680,27 +1680,51 @@ export async function getTokensByTag(
     descVariants.add(`%${bare}%`);
   }
 
-  const where: Record<string, unknown> = {
-    _or: [
-      ...[...tagVariants].map((v) => ({ tags: { tag: { name: { _ilike: v } } } })),
-      // objkt searches descriptions too — some artists declare event entry in
-      // description text rather than tags (e.g. "AI contribution to
-      // #ProofofPalm #ProofofPalm2026"). Match those.
-      ...[...descVariants].map((v) => ({ description: { _ilike: v } })),
-    ],
-    // Exclude burned tokens — matching objkt's UI count which only displays
-    // active mints in tag search results.
-    supply: { _gt: 0 },
-    timestamp: {
-      _gte: since ?? "1970-01-01T00:00:00Z",
-      _lte: until ?? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    },
+  const timestampFilter = {
+    _gte: since ?? "1970-01-01T00:00:00Z",
+    _lte: until ?? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
   };
-  const data = await objktQuery<{ token: LatestMintToken[] }>(TOKENS_BY_TAG_QUERY, {
-    where,
-    limit,
-  });
-  return data.token;
+
+  // Run the tag-match and description-match as TWO parallel queries rather than
+  // one combined `_or`. objkt's Hasura plans an `_or` that mixes nested-relation
+  // subqueries (tags) with a scalar leading-wildcard scan (description) very
+  // badly — ~10s. Split, they're ~2s and ~4s and run concurrently, so the
+  // page is bounded by the slower one (~4s) instead of 10s+.
+  // `supply > 0` is also kept OUT of the where clause for the same reason and
+  // filtered client-side.
+  const tagWhere = {
+    _or: [...tagVariants].map((v) => ({ tags: { tag: { name: { _ilike: v } } } })),
+    timestamp: timestampFilter,
+  };
+  const descWhere = {
+    _or: [...descVariants].map((v) => ({ description: { _ilike: v } })),
+    timestamp: timestampFilter,
+  };
+  const overFetch = limit + 24;
+  const [tagData, descData] = await Promise.all([
+    objktQuery<{ token: LatestMintToken[] }>(TOKENS_BY_TAG_QUERY, {
+      where: tagWhere,
+      limit: overFetch,
+    }),
+    objktQuery<{ token: LatestMintToken[] }>(TOKENS_BY_TAG_QUERY, {
+      where: descWhere,
+      limit: overFetch,
+    }),
+  ]);
+
+  // Merge, dedupe by (fa, tokenId), drop burned, sort newest-first.
+  const seen = new Set<string>();
+  const merged: LatestMintToken[] = [];
+  for (const t of [...tagData.token, ...descData.token]) {
+    const key = `${t.fa_contract}:${t.token_id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if ((t.supply ?? 0) > 0) merged.push(t);
+  }
+  merged.sort((a, b) =>
+    (b.timestamp ?? "") < (a.timestamp ?? "") ? -1 : (b.timestamp ?? "") > (a.timestamp ?? "") ? 1 : 0,
+  );
+  return merged.slice(0, limit);
 }
 
 // Sales where a given wallet was the buyer (for /pnl cost-basis)
